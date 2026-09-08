@@ -1,0 +1,26 @@
+{
+  "name": "picsizekit",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev",
+    "build": "ASTRO_TELEMETRY_DISABLED=1 astro check && ASTRO_TELEMETRY_DISABLED=1 astro build",
+    "check": "ASTRO_TELEMETRY_DISABLED=1 astro check",
+    "preview": "ASTRO_TELEMETRY_DISABLED=1 astro preview"
+  },
+  "dependencies": {
+    "@astrojs/check": "^0.9.10",
+    "@astrojs/react": "^6.0.5",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.7",
+    "astro": "^7.3.1",
+    "fflate": "^0.8.3",
+    "pica": "^10.0.3",
+    "piexifjs": "^1.0.6",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-image-crop": "^11.1.2",
+    "typescript": "^6.0.3"
+  }
+}
