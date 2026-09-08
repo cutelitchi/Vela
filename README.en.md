@@ -33,8 +33,8 @@ Website: [picsizekit.com](https://picsizekit.com)
 | --- | --- |
 | Drag, drop and batch select | Import multiple JPEG, PNG and WebP images |
 | Precise sizing | Resize by pixels or percentage and lock the aspect ratio |
-| Visual crop tool | Common screen ratios plus Small 1-inch, 1-inch, Passport, 2-inch and Large 2-inch Chinese ID photo presets |
-| Theater preview | Double-click the crop area for a distraction-free dark preview; double-click again or press Esc to exit |
+| Visual crop tool | Common screen ratios, 1.85:1/2.35:1/2.39:1 cinema formats and Chinese ID photo presets |
+| Theater preview | Double-click the crop area to preview exactly what is inside the selection; double-click again or press Esc to exit |
 | Format conversion | Export JPEG, PNG or WebP |
 | Quality control | Quality slider for JPEG and WebP; lossless PNG output |
 | Live size comparison | See estimated output dimensions, file size and savings while changing size, format or quality |

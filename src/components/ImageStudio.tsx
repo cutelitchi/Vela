@@ -80,6 +80,8 @@ const dictionaries = {
     cropHelp: '拖动或缩放选框来决定保留范围。',
     previewHelp: '双击图片进入影院预览',
     theaterHelp: '双击图片或按 Esc 退出影院预览',
+    theaterLoading: '正在生成裁剪区域预览…',
+    cinemaRatios: '经典电影画幅',
     photoRatios: '中国常用证件照',
     photoRatioHint: '预设按毫米尺寸锁定裁剪比例，提交前请核对办理方的像素要求。',
     settings: '处理设置',
@@ -135,6 +137,8 @@ const dictionaries = {
     cropHelp: 'Move or resize the selection to choose what stays.',
     previewHelp: 'Double-click the image for theater preview',
     theaterHelp: 'Double-click the image or press Esc to exit',
+    theaterLoading: 'Preparing the cropped-area preview…',
+    cinemaRatios: 'Classic cinema ratios',
     photoRatios: 'Common Chinese ID photos',
     photoRatioHint: 'Presets lock the crop ratio by millimeter size. Confirm the required pixel dimensions before submission.',
     settings: 'Processing settings',
@@ -167,7 +171,13 @@ const chinaPhotoPresets = [
   { key: 'cn-large-2', value: 35 / 53, labelZh: '大2寸', labelEn: 'Large 2-inch', size: '35×53 mm' },
 ] as const;
 
-const ratioPresets = [...standardRatioPresets, ...chinaPhotoPresets] as const;
+const cinemaRatioPresets = [
+  { key: 'cinema-1.85', value: 1.85, label: '1.85:1', noteZh: '院线宽银幕', noteEn: 'Cinema flat' },
+  { key: 'cinema-2.35', value: 2.35, label: '2.35:1', noteZh: '经典宽银幕', noteEn: 'Classic scope' },
+  { key: 'cinema-2.39', value: 2.39, label: '2.39:1', noteZh: '现代宽银幕', noteEn: 'Modern scope' },
+] as const;
+
+const ratioPresets = [...standardRatioPresets, ...cinemaRatioPresets, ...chinaPhotoPresets] as const;
 
 const picaInstance = pica({ features: ['js', 'wasm', 'ww'] });
 
@@ -286,9 +296,13 @@ export default function ImageStudio() {
   const [liveEstimate, setLiveEstimate] = useState<LiveEstimate>();
   const [estimating, setEstimating] = useState(false);
   const [theaterMode, setTheaterMode] = useState(false);
+  const [theaterLoading, setTheaterLoading] = useState(false);
+  const [theaterPreviewUrl, setTheaterPreviewUrl] = useState<string>();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const estimateUrlRef = useRef<string | undefined>(undefined);
   const estimateJobRef = useRef(0);
+  const theaterUrlRef = useRef<string | undefined>(undefined);
+  const theaterJobRef = useRef(0);
   const selected = items.find((item) => item.id === selectedId) ?? items[0];
   const t = dictionaries[language];
 
@@ -312,7 +326,7 @@ export default function ImageStudio() {
   useEffect(() => {
     if (!theaterMode) return;
     const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setTheaterMode(false);
+      if (event.key === 'Escape') closeTheater();
     };
     window.addEventListener('keydown', closeOnEscape);
     return () => window.removeEventListener('keydown', closeOnEscape);
@@ -375,7 +389,65 @@ export default function ImageStudio() {
 
   useEffect(() => () => {
     if (estimateUrlRef.current) URL.revokeObjectURL(estimateUrlRef.current);
+    if (theaterUrlRef.current) URL.revokeObjectURL(theaterUrlRef.current);
   }, []);
+
+  async function createTheaterPreview(item: ImageItem) {
+    const image = await loadImage(item.sourceUrl);
+    const crop = crops[item.id] ?? centeredCrop(
+      item.width,
+      item.height,
+      ratioKey === 'original' ? item.width / item.height : activeAspect,
+    );
+    const sx = Math.max(0, Math.round((crop.x / 100) * item.width));
+    const sy = Math.max(0, Math.round((crop.y / 100) * item.height));
+    const sw = Math.max(1, Math.min(item.width - sx, Math.round((crop.width / 100) * item.width)));
+    const sh = Math.max(1, Math.min(item.height - sy, Math.round((crop.height / 100) * item.height)));
+    const scale = Math.min(1, 2400 / Math.max(sw, sh));
+    const canvas = document.createElement('canvas');
+    canvas.width = clampDimension(sw * scale);
+    canvas.height = clampDimension(sh * scale);
+    const context = canvas.getContext('2d');
+    if (!context) throw new Error('Canvas unavailable');
+    context.imageSmoothingEnabled = true;
+    context.imageSmoothingQuality = 'high';
+    context.drawImage(image, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
+    return picaInstance.toBlob(canvas, 'image/webp', 0.92);
+  }
+
+  async function openTheater() {
+    if (!selected) return;
+    const item = selected;
+    const jobId = ++theaterJobRef.current;
+    if (theaterUrlRef.current) URL.revokeObjectURL(theaterUrlRef.current);
+    theaterUrlRef.current = undefined;
+    setTheaterPreviewUrl(undefined);
+    setTheaterLoading(true);
+    setTheaterMode(true);
+    try {
+      const blob = await createTheaterPreview(item);
+      if (jobId !== theaterJobRef.current) return;
+      const url = URL.createObjectURL(blob);
+      theaterUrlRef.current = url;
+      setTheaterPreviewUrl(url);
+    } catch {
+      if (jobId === theaterJobRef.current) {
+        closeTheater();
+        setNotice(t.errorProcess);
+      }
+    } finally {
+      if (jobId === theaterJobRef.current) setTheaterLoading(false);
+    }
+  }
+
+  function closeTheater() {
+    theaterJobRef.current += 1;
+    if (theaterUrlRef.current) URL.revokeObjectURL(theaterUrlRef.current);
+    theaterUrlRef.current = undefined;
+    setTheaterPreviewUrl(undefined);
+    setTheaterLoading(false);
+    setTheaterMode(false);
+  }
 
   async function addFiles(fileList: FileList | File[]) {
     const files = Array.from(fileList);
@@ -561,7 +633,7 @@ export default function ImageStudio() {
     if (estimateUrlRef.current) URL.revokeObjectURL(estimateUrlRef.current);
     estimateUrlRef.current = undefined;
     setLiveEstimate(undefined);
-    setTheaterMode(false);
+    closeTheater();
   }
 
   const completedCount = items.filter((item) => item.outputBlob).length;
@@ -667,7 +739,7 @@ export default function ImageStudio() {
               </div>
               <div
                 className="crop-stage"
-                onDoubleClick={() => selected && setTheaterMode(true)}
+                onDoubleClick={() => void openTheater()}
                 title={t.previewHelp}
               >
                 {selected && previewView === 'source' && (
@@ -710,6 +782,19 @@ export default function ImageStudio() {
                       onClick={() => updateRatio(preset.key)}
                     >
                       {preset.key === 'original' ? t.original : preset.key === 'custom' ? t.custom : preset.label}
+                    </button>
+                  ))}
+                </div>
+                <div className="photo-preset-heading"><span>{t.cinemaRatios}</span><i /></div>
+                <div className="photo-ratio-grid cinema-ratio-grid">
+                  {cinemaRatioPresets.map((preset) => (
+                    <button
+                      key={preset.key}
+                      className={ratioKey === preset.key ? 'active' : ''}
+                      onClick={() => updateRatio(preset.key)}
+                    >
+                      <span>{preset.label}</span>
+                      <small>{language === 'zh' ? preset.noteZh : preset.noteEn}</small>
                     </button>
                   ))}
                 </div>
@@ -850,15 +935,14 @@ export default function ImageStudio() {
           role="dialog"
           aria-modal="true"
           aria-label={t.previewHelp}
-          onDoubleClick={() => setTheaterMode(false)}
+          onDoubleClick={closeTheater}
         >
-          <button className="theater-close" aria-label={t.theaterHelp} onClick={() => setTheaterMode(false)}>×</button>
+          <button className="theater-close" aria-label={t.theaterHelp} onClick={closeTheater}>×</button>
           <div className="theater-frame">
-            <img
-              src={previewView === 'result' && previewResultUrl ? previewResultUrl : selected.sourceUrl}
-              alt={selected.file.name}
-              draggable={false}
-            />
+            {theaterPreviewUrl && (
+              <img src={theaterPreviewUrl} alt={selected.file.name} draggable={false} />
+            )}
+            {theaterLoading && <div className="theater-loading"><i /><span>{t.theaterLoading}</span></div>}
             <p>{t.theaterHelp}</p>
           </div>
         </div>
