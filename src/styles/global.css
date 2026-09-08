@@ -87,10 +87,11 @@ svg { width: 1.15rem; height: 1.15rem; fill: none; stroke: currentColor; stroke-
 .preview-tabs button { color: var(--muted); height: 55px; display: flex; align-items: center; border: 0; border-bottom: 2px solid transparent; background: transparent; padding: 0; font-size: .82rem; }
 .preview-tabs button.active { color: var(--text); border-color: var(--orange); font-weight: 800; }
 .dimension-readout, .step-count { font: 500 .68rem ui-monospace, 'SFMono-Regular', Consolas, monospace; color: var(--muted); letter-spacing: .06em; }
-.crop-stage { min-height: 520px; display: grid; place-items: center; padding: 28px; background: #dfe4ec; background-image: linear-gradient(45deg, rgba(255,255,255,.38) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,.38) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,255,255,.38) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.38) 75%); background-size: 22px 22px; background-position: 0 0, 0 11px, 11px -11px, -11px 0; }
+.crop-stage { min-height: 520px; display: grid; place-items: center; padding: 28px; position: relative; cursor: zoom-in; background: #dfe4ec; background-image: linear-gradient(45deg, rgba(255,255,255,.38) 25%, transparent 25%), linear-gradient(-45deg, rgba(255,255,255,.38) 25%, transparent 25%), linear-gradient(45deg, transparent 75%, rgba(255,255,255,.38) 75%), linear-gradient(-45deg, transparent 75%, rgba(255,255,255,.38) 75%); background-size: 22px 22px; background-position: 0 0, 0 11px, 11px -11px, -11px 0; }
 .crop-stage .ReactCrop { max-height: 500px; box-shadow: 0 24px 65px rgba(17,29,47,.24); }
 .crop-stage img { display: block; max-width: 100%; max-height: 500px; object-fit: contain; }
 .crop-stage .result-preview { box-shadow: 0 24px 65px rgba(17,29,47,.24); }
+.preview-hint { position: absolute; right: 14px; bottom: 12px; padding: 6px 9px; border-radius: 7px; color: #eaf2fb; background: rgba(9,17,31,.76); backdrop-filter: blur(8px); font-size: .64rem; letter-spacing: .02em; pointer-events: none; }
 .ReactCrop__crop-selection { border: 2px solid var(--cyan); box-shadow: 0 0 0 9999em rgba(9,17,31,.58); }
 .ReactCrop__drag-handle { width: 12px; height: 12px; background: var(--cyan); border: 2px solid var(--ink); }
 .crop-help { min-height: 48px; padding: 0 18px; display: flex; align-items: center; gap: 9px; color: var(--muted); font-size: .78rem; border-top: 1px solid var(--line); }
@@ -101,9 +102,15 @@ svg { width: 1.15rem; height: 1.15rem; fill: none; stroke: currentColor; stroke-
 .control-label { display: flex; align-items: center; gap: 9px; font-size: .78rem; font-weight: 800; margin-bottom: 12px; }
 .control-label b { font: 500 .65rem ui-monospace, 'SFMono-Regular', Consolas, monospace; color: var(--orange); }
 .ratio-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
-.ratio-grid button, .format-grid button, .segmented button { border: 1px solid var(--line); background: var(--paper); color: #4d596a; min-height: 35px; border-radius: 7px; font-size: .72rem; font-weight: 700; }
-.ratio-grid button:hover, .format-grid button:hover { border-color: #8390a3; }
-.ratio-grid button.active, .format-grid button.active, .segmented button.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+.ratio-grid button, .photo-ratio-grid button, .format-grid button, .segmented button { border: 1px solid var(--line); background: var(--paper); color: #4d596a; min-height: 35px; border-radius: 7px; font-size: .72rem; font-weight: 700; }
+.ratio-grid button:hover, .photo-ratio-grid button:hover, .format-grid button:hover { border-color: #8390a3; }
+.ratio-grid button.active, .photo-ratio-grid button.active, .format-grid button.active, .segmented button.active { background: var(--ink); border-color: var(--ink); color: #fff; }
+.photo-preset-heading { display: flex; align-items: center; gap: 9px; margin: 13px 0 7px; color: var(--muted); font-size: .66rem; font-weight: 700; }
+.photo-preset-heading i { flex: 1; height: 1px; background: var(--line); }
+.photo-ratio-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 5px; }
+.photo-ratio-grid button { min-height: 48px; padding: 6px 4px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; line-height: 1.15; }
+.photo-ratio-grid button small { color: #8a95a5; font: 500 .56rem ui-monospace, 'SFMono-Regular', Consolas, monospace; }
+.photo-ratio-grid button.active small { color: #a8b6c9; }
 .custom-ratio { margin-top: 9px; display: grid; grid-template-columns: 1fr auto 1fr; gap: 8px; align-items: center; }
 .custom-ratio input { width: 100%; border: 1px solid var(--line); background: #fff; border-radius: 7px; padding: 8px; color: var(--text); }
 .segmented { display: grid; grid-template-columns: 1fr 1fr; background: #e6eaf0; padding: 3px; border-radius: 8px; margin-bottom: 11px; }
@@ -120,6 +127,15 @@ svg { width: 1.15rem; height: 1.15rem; fill: none; stroke: currentColor; stroke-
 .range-control strong { color: var(--text); font: 500 .76rem ui-monospace, 'SFMono-Regular', Consolas, monospace; }
 input[type='range'] { width: 100%; accent-color: var(--orange); }
 .quality { margin-top: 12px; }
+.live-comparison { margin-top: 13px; padding: 10px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 9px; border: 1px solid var(--line); border-radius: 9px; background: #fff; position: relative; }
+.live-comparison > div { min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.live-comparison small { color: var(--muted); font-size: .6rem; }
+.live-comparison strong { color: var(--text); font: 700 .78rem ui-monospace, 'SFMono-Regular', Consolas, monospace; white-space: nowrap; }
+.live-comparison span { color: #7a8696; font: 500 .58rem ui-monospace, 'SFMono-Regular', Consolas, monospace; white-space: nowrap; }
+.live-comparison > b { color: var(--orange); font-weight: 500; }
+.live-comparison em { position: absolute; right: 8px; top: 8px; padding: 2px 5px; border-radius: 4px; font-size: .55rem; font-style: normal; }
+.live-comparison em.positive { color: #087b55; background: #ddf7ed; }
+.live-comparison em.negative { color: #b84631; background: #ffe8e3; }
 .hint { margin: 9px 0 0; font-size: .67rem; line-height: 1.45; color: var(--muted); }
 .metadata-control { padding-right: 68px; }
 .metadata-control .control-label { margin-bottom: 3px; }
@@ -152,6 +168,14 @@ input[type='range'] { width: 100%; accent-color: var(--orange); }
 .queue-buttons button { width: 34px; height: 34px; display: grid; place-items: center; background: transparent; color: #596578; border: 1px solid var(--line); border-radius: 7px; font-size: 1.1rem; }
 .queue-buttons button:hover { background: var(--ink); color: #fff; border-color: var(--ink); }
 
+.theater-overlay { position: fixed; inset: 0; z-index: 1000; padding: 28px; display: grid; place-items: center; background: rgba(2,5,10,.96); backdrop-filter: blur(12px); cursor: zoom-out; animation: theater-in .2s ease-out; }
+.theater-frame { width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; }
+.theater-frame img { display: block; max-width: min(94vw, 1500px); max-height: 86vh; object-fit: contain; border-radius: 5px; box-shadow: 0 32px 100px rgba(0,0,0,.66); }
+.theater-frame p { margin: 0; color: #8390a3; font-size: .72rem; }
+.theater-close { position: fixed; right: 24px; top: 20px; z-index: 1; width: 42px; height: 42px; border: 1px solid rgba(255,255,255,.18); border-radius: 50%; background: rgba(255,255,255,.08); color: #fff; font-size: 1.7rem; line-height: 1; }
+.theater-close:hover { background: #fff; color: var(--ink); }
+@keyframes theater-in { from { opacity: 0; } to { opacity: 1; } }
+
 footer { min-height: 76px; display: flex; align-items: center; justify-content: space-between; color: #6f7d91; font-size: .72rem; }
 footer span { font: 500 .68rem ui-monospace, 'SFMono-Regular', Consolas, monospace; letter-spacing: .06em; }
 footer p { margin: 0; }
@@ -177,6 +201,10 @@ footer p { margin: 0; }
   .button.subtle svg { display: none; }
   .crop-stage { min-height: 300px; padding: 14px; }
   .ratio-grid { grid-template-columns: repeat(3, 1fr); }
+  .photo-ratio-grid { grid-template-columns: repeat(2, 1fr); }
+  .preview-hint { display: none; }
+  .theater-overlay { padding: 14px; }
+  .theater-close { right: 14px; top: 14px; }
   .queue-item { grid-template-columns: 46px 1fr auto; }
   .queue-item > img { width: 46px; height: 46px; }
   .queue-result, .waiting, .item-error { grid-column: 2 / -1; }

@@ -26,6 +26,14 @@ type ImageItem = {
   error?: string;
 };
 
+type LiveEstimate = {
+  itemId: string;
+  blob: Blob;
+  url: string;
+  width: number;
+  height: number;
+};
+
 const dictionaries = {
   zh: {
     brandNote: '本地影像工具',
@@ -51,6 +59,9 @@ const dictionaries = {
     lock: '锁定比例',
     format: '输出格式',
     quality: '压缩质量',
+    liveComparison: '实时对比',
+    estimated: '预计输出',
+    estimating: '计算中…',
     pngHint: 'PNG 使用无损压缩，不会降低画质。',
     metadata: '删除 EXIF 隐私信息',
     metadataHint: '移除位置、设备型号和拍摄时间等信息。',
@@ -67,6 +78,10 @@ const dictionaries = {
     saved: '节省',
     waiting: '调整参数后点击“处理图片”生成结果',
     cropHelp: '拖动或缩放选框来决定保留范围。',
+    previewHelp: '双击图片进入影院预览',
+    theaterHelp: '双击图片或按 Esc 退出影院预览',
+    photoRatios: '中国常用证件照',
+    photoRatioHint: '预设按毫米尺寸锁定裁剪比例，提交前请核对办理方的像素要求。',
     settings: '处理设置',
     queue: '图片队列',
     localBadge: 'LOCAL ONLY',
@@ -99,6 +114,9 @@ const dictionaries = {
     lock: 'Lock ratio',
     format: 'Output format',
     quality: 'Compression quality',
+    liveComparison: 'Live comparison',
+    estimated: 'Estimated output',
+    estimating: 'Calculating…',
     pngHint: 'PNG uses lossless compression and keeps visual quality.',
     metadata: 'Remove private EXIF data',
     metadataHint: 'Removes location, device model, capture time and related metadata.',
@@ -115,6 +133,10 @@ const dictionaries = {
     saved: 'saved',
     waiting: 'Adjust the settings, then process the images to see results',
     cropHelp: 'Move or resize the selection to choose what stays.',
+    previewHelp: 'Double-click the image for theater preview',
+    theaterHelp: 'Double-click the image or press Esc to exit',
+    photoRatios: 'Common Chinese ID photos',
+    photoRatioHint: 'Presets lock the crop ratio by millimeter size. Confirm the required pixel dimensions before submission.',
     settings: 'Processing settings',
     queue: 'Image queue',
     localBadge: 'LOCAL ONLY',
@@ -125,7 +147,7 @@ const dictionaries = {
   },
 } as const;
 
-const ratioPresets = [
+const standardRatioPresets = [
   { key: 'original', value: 0, label: 'Original' },
   { key: '1:1', value: 1, label: '1:1' },
   { key: '4:3', value: 4 / 3, label: '4:3' },
@@ -136,6 +158,16 @@ const ratioPresets = [
   { key: '9:16', value: 9 / 16, label: '9:16' },
   { key: 'custom', value: -1, label: 'Custom' },
 ] as const;
+
+const chinaPhotoPresets = [
+  { key: 'cn-small-1', value: 22 / 32, labelZh: '小1寸', labelEn: 'Small 1-inch', size: '22×32 mm' },
+  { key: 'cn-1', value: 25 / 35, labelZh: '1寸', labelEn: '1-inch', size: '25×35 mm' },
+  { key: 'cn-passport', value: 33 / 48, labelZh: '小2寸 / 护照', labelEn: 'Passport', size: '33×48 mm' },
+  { key: 'cn-2', value: 35 / 49, labelZh: '2寸', labelEn: '2-inch', size: '35×49 mm' },
+  { key: 'cn-large-2', value: 35 / 53, labelZh: '大2寸', labelEn: 'Large 2-inch', size: '35×53 mm' },
+] as const;
+
+const ratioPresets = [...standardRatioPresets, ...chinaPhotoPresets] as const;
 
 const picaInstance = pica({ features: ['js', 'wasm', 'ww'] });
 
@@ -251,7 +283,12 @@ export default function ImageStudio() {
   const [dragging, setDragging] = useState(false);
   const [notice, setNotice] = useState('');
   const [previewView, setPreviewView] = useState<'source' | 'result'>('source');
+  const [liveEstimate, setLiveEstimate] = useState<LiveEstimate>();
+  const [estimating, setEstimating] = useState(false);
+  const [theaterMode, setTheaterMode] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const estimateUrlRef = useRef<string | undefined>(undefined);
+  const estimateJobRef = useRef(0);
   const selected = items.find((item) => item.id === selectedId) ?? items[0];
   const t = dictionaries[language];
 
@@ -272,6 +309,15 @@ export default function ImageStudio() {
     setPreviewView('source');
   }, [selectedId]);
 
+  useEffect(() => {
+    if (!theaterMode) return;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setTheaterMode(false);
+    };
+    window.addEventListener('keydown', closeOnEscape);
+    return () => window.removeEventListener('keydown', closeOnEscape);
+  }, [theaterMode]);
+
   useEffect(() => () => {
     items.forEach((item) => {
       URL.revokeObjectURL(item.sourceUrl);
@@ -289,6 +335,47 @@ export default function ImageStudio() {
   const currentCrop = selected
     ? crops[selected.id] ?? centeredCrop(selected.width, selected.height, activeAspect)
     : undefined;
+
+  const cropSignature = currentCrop
+    ? `${currentCrop.x.toFixed(3)}:${currentCrop.y.toFixed(3)}:${currentCrop.width.toFixed(3)}:${currentCrop.height.toFixed(3)}`
+    : '';
+
+  useEffect(() => {
+    if (!selected) {
+      if (estimateUrlRef.current) URL.revokeObjectURL(estimateUrlRef.current);
+      estimateUrlRef.current = undefined;
+      setLiveEstimate(undefined);
+      setEstimating(false);
+      return;
+    }
+    const jobId = ++estimateJobRef.current;
+    setEstimating(true);
+    const timer = window.setTimeout(async () => {
+      try {
+        const result = await processItem(selected);
+        if (jobId !== estimateJobRef.current) return;
+        const url = URL.createObjectURL(result.outputBlob);
+        if (estimateUrlRef.current) URL.revokeObjectURL(estimateUrlRef.current);
+        estimateUrlRef.current = url;
+        setLiveEstimate({
+          itemId: selected.id,
+          blob: result.outputBlob,
+          url,
+          width: result.outputWidth,
+          height: result.outputHeight,
+        });
+      } catch {
+        if (jobId === estimateJobRef.current) setLiveEstimate(undefined);
+      } finally {
+        if (jobId === estimateJobRef.current) setEstimating(false);
+      }
+    }, 260);
+    return () => window.clearTimeout(timer);
+  }, [selectedId, cropSignature, resizeMode, targetWidth, targetHeight, scalePercent, format, quality, stripMetadata, ratioKey, activeAspect]);
+
+  useEffect(() => () => {
+    if (estimateUrlRef.current) URL.revokeObjectURL(estimateUrlRef.current);
+  }, []);
 
   async function addFiles(fileList: FileList | File[]) {
     const files = Array.from(fileList);
@@ -471,9 +558,21 @@ export default function ImageStudio() {
     setItems([]);
     setCrops({});
     setSelectedId('');
+    if (estimateUrlRef.current) URL.revokeObjectURL(estimateUrlRef.current);
+    estimateUrlRef.current = undefined;
+    setLiveEstimate(undefined);
+    setTheaterMode(false);
   }
 
   const completedCount = items.filter((item) => item.outputBlob).length;
+  const selectedEstimate = liveEstimate?.itemId === selected?.id ? liveEstimate : undefined;
+  const previewResultUrl = selectedEstimate?.url ?? selected?.outputUrl;
+  const previewResultWidth = selectedEstimate?.width ?? selected?.outputWidth;
+  const previewResultHeight = selectedEstimate?.height ?? selected?.outputHeight;
+  const previewResultSize = selectedEstimate?.blob.size ?? selected?.outputBlob?.size;
+  const estimatedSavings = selected && previewResultSize
+    ? Math.round((1 - previewResultSize / selected.file.size) * 100)
+    : undefined;
 
   return (
     <main className="app-shell">
@@ -487,9 +586,9 @@ export default function ImageStudio() {
         </a>
         <div className="header-actions">
           <span className="local-chip"><i /> {t.localBadge}</span>
-          <div className="language-toggle" aria-label="Language">
-            <button className={language === 'zh' ? 'active' : ''} onClick={() => setLanguage('zh')}>中文</button>
-            <button className={language === 'en' ? 'active' : ''} onClick={() => setLanguage('en')}>EN</button>
+          <div className="language-toggle" aria-label="Language / 语言">
+            <button aria-pressed={language === 'zh'} className={language === 'zh' ? 'active' : ''} onClick={() => setLanguage('zh')}>中文</button>
+            <button aria-pressed={language === 'en'} className={language === 'en' ? 'active' : ''} onClick={() => setLanguage('en')}>EN</button>
           </div>
         </div>
       </header>
@@ -558,15 +657,19 @@ export default function ImageStudio() {
               <div className="panel-heading">
                 <div className="preview-tabs">
                   <button className={previewView === 'source' ? 'active' : ''} onClick={() => setPreviewView('source')}>{t.source}</button>
-                  {selected?.outputUrl && <button className={previewView === 'result' ? 'active' : ''} onClick={() => setPreviewView('result')}>{t.result}</button>}
+                  {previewResultUrl && <button className={previewView === 'result' ? 'active' : ''} onClick={() => setPreviewView('result')}>{t.result}</button>}
                 </div>
                 <span className="dimension-readout">
-                  {previewView === 'result' && selected?.outputWidth
-                    ? `${selected.outputWidth} × ${selected.outputHeight}`
+                  {previewView === 'result' && previewResultWidth
+                    ? `${previewResultWidth} × ${previewResultHeight}`
                     : `${selected?.width} × ${selected?.height}`} PX
                 </span>
               </div>
-              <div className="crop-stage">
+              <div
+                className="crop-stage"
+                onDoubleClick={() => selected && setTheaterMode(true)}
+                title={t.previewHelp}
+              >
                 {selected && previewView === 'source' && (
                   <ReactCrop
                     crop={currentCrop}
@@ -578,15 +681,16 @@ export default function ImageStudio() {
                     <img src={selected.sourceUrl} alt={selected.file.name} draggable={false} />
                   </ReactCrop>
                 )}
-                {selected?.outputUrl && previewView === 'result' && (
-                  <img className="result-preview" src={selected.outputUrl} alt={`${selected.file.name} ${t.result}`} />
+                {selected && previewResultUrl && previewView === 'result' && (
+                  <img className="result-preview" src={previewResultUrl} alt={`${selected.file.name} ${t.result}`} />
                 )}
+                <span className="preview-hint">↗ {t.previewHelp}</span>
               </div>
               <div className="crop-help">
                 <span>{previewView === 'source' ? '↗' : '✓'}</span>
-                {previewView === 'source' || !selected?.outputBlob
+                {previewView === 'source' || !previewResultSize
                   ? t.cropHelp
-                  : `${t.before} ${formatBytes(selected.file.size)} · ${t.after} ${formatBytes(selected.outputBlob.size)}`}
+                  : `${t.before} ${formatBytes(selected!.file.size)} · ${t.after} ${formatBytes(previewResultSize)}`}
               </div>
             </div>
 
@@ -599,7 +703,7 @@ export default function ImageStudio() {
               <div className="control-section">
                 <label className="control-label"><b>01</b>{t.cropRatio}</label>
                 <div className="ratio-grid">
-                  {ratioPresets.map((preset) => (
+                  {standardRatioPresets.map((preset) => (
                     <button
                       key={preset.key}
                       className={ratioKey === preset.key ? 'active' : ''}
@@ -609,6 +713,20 @@ export default function ImageStudio() {
                     </button>
                   ))}
                 </div>
+                <div className="photo-preset-heading"><span>{t.photoRatios}</span><i /></div>
+                <div className="photo-ratio-grid">
+                  {chinaPhotoPresets.map((preset) => (
+                    <button
+                      key={preset.key}
+                      className={ratioKey === preset.key ? 'active' : ''}
+                      onClick={() => updateRatio(preset.key)}
+                    >
+                      <span>{language === 'zh' ? preset.labelZh : preset.labelEn}</span>
+                      <small>{preset.size}</small>
+                    </button>
+                  ))}
+                </div>
+                <p className="hint">{t.photoRatioHint}</p>
                 {ratioKey === 'custom' && (
                   <div className="custom-ratio">
                     <input aria-label={`${t.customRatio} ${t.width}`} type="number" min="1" value={customRatio.width} onChange={(event) => updateCustomRatio('width', Number(event.target.value))} />
@@ -649,6 +767,26 @@ export default function ImageStudio() {
                   <div className="range-control quality">
                     <div><span>{t.quality}</span><strong>{quality}</strong></div>
                     <input type="range" min="20" max="100" value={quality} onChange={(event) => setQuality(Number(event.target.value))} />
+                  </div>
+                )}
+                {selected && (
+                  <div className="live-comparison" aria-label={t.liveComparison}>
+                    <div>
+                      <small>{t.source}</small>
+                      <strong>{formatBytes(selected.file.size)}</strong>
+                      <span>{selected.width} × {selected.height} px</span>
+                    </div>
+                    <b aria-hidden="true">→</b>
+                    <div>
+                      <small>{t.estimated}</small>
+                      <strong>{estimating ? t.estimating : previewResultSize ? formatBytes(previewResultSize) : '—'}</strong>
+                      <span>{previewResultWidth && previewResultHeight ? `${previewResultWidth} × ${previewResultHeight} px` : '—'}</span>
+                    </div>
+                    {!estimating && estimatedSavings !== undefined && (
+                      <em className={estimatedSavings >= 0 ? 'positive' : 'negative'}>
+                        {estimatedSavings >= 0 ? '−' : '+'}{Math.abs(estimatedSavings)}% {t.saved}
+                      </em>
+                    )}
                   </div>
                 )}
               </div>
@@ -704,6 +842,26 @@ export default function ImageStudio() {
             </div>
           </section>
         </>
+      )}
+
+      {theaterMode && selected && (
+        <div
+          className="theater-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t.previewHelp}
+          onDoubleClick={() => setTheaterMode(false)}
+        >
+          <button className="theater-close" aria-label={t.theaterHelp} onClick={() => setTheaterMode(false)}>×</button>
+          <div className="theater-frame">
+            <img
+              src={previewView === 'result' && previewResultUrl ? previewResultUrl : selected.sourceUrl}
+              alt={selected.file.name}
+              draggable={false}
+            />
+            <p>{t.theaterHelp}</p>
+          </div>
+        </div>
       )}
 
       <footer>
