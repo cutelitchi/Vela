@@ -42,7 +42,6 @@ const dictionaries = {
     privacy: '图片仅在您的浏览器中处理，不会上传到服务器。',
     choose: '拖拽图片到这里，或点击选择',
     chooseNote: '支持 JPEG、PNG、WebP，可一次选择多张',
-    addMore: '继续添加',
     workspace: '工作区',
     source: '原图',
     result: '结果',
@@ -99,7 +98,6 @@ const dictionaries = {
     privacy: 'Your images are processed only in your browser and never uploaded.',
     choose: 'Drop images here, or click to choose',
     chooseNote: 'JPEG, PNG and WebP supported — select multiple files',
-    addMore: 'Add more',
     workspace: 'Workspace',
     source: 'Original',
     result: 'Result',
@@ -275,7 +273,7 @@ function IconDownload() {
 }
 
 export default function ImageStudio() {
-  const [language, setLanguage] = useState<Language>('zh');
+  const [language, setLanguage] = useState<Language>('en');
   const [items, setItems] = useState<ImageItem[]>([]);
   const [selectedId, setSelectedId] = useState<string>('');
   const [crops, setCrops] = useState<Record<string, PercentCrop>>({});
@@ -307,12 +305,12 @@ export default function ImageStudio() {
   const t = dictionaries[language];
 
   useEffect(() => {
-    const saved = window.localStorage.getItem('picsizekit-language');
+    const saved = window.localStorage.getItem('picsizekit-language-v2');
     if (saved === 'en' || saved === 'zh') setLanguage(saved);
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem('picsizekit-language', language);
+    window.localStorage.setItem('picsizekit-language-v2', language);
     document.documentElement.lang = language === 'zh' ? 'zh-CN' : 'en';
     document.title = language === 'zh'
       ? 'PicSizeKit — 隐私优先的图片裁剪、缩放与压缩工具'
@@ -647,7 +645,7 @@ export default function ImageStudio() {
     : undefined;
 
   return (
-    <main className="app-shell">
+    <main className={`app-shell ${items.length ? 'has-workspace' : ''}`}>
       <header className="site-header">
         <a className="brand" href="/" aria-label="PicSizeKit home">
           <span className="brand-mark"><span /></span>
@@ -665,7 +663,7 @@ export default function ImageStudio() {
         </div>
       </header>
 
-      <section className="intro-strip">
+      <section className={`intro-strip ${items.length ? 'workspace-active' : ''}`}>
         <div>
           <span className="section-index">01 / IMAGE LAB</span>
           <h1>{t.headline}</h1>
@@ -711,16 +709,7 @@ export default function ImageStudio() {
           <section className="workspace-heading">
             <div><span className="section-index">02 / {t.workspace.toUpperCase()}</span></div>
             <div className="workspace-actions">
-              <button className="button subtle" onClick={() => fileInputRef.current?.click()}><IconUpload />{t.addMore}</button>
               <button className="button subtle danger" onClick={clearAll}>{t.clear}</button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/jpeg,image/png,image/webp"
-                multiple
-                hidden
-                onChange={(event) => event.target.files && void addFiles(event.target.files)}
-              />
             </div>
           </section>
 
@@ -749,8 +738,14 @@ export default function ImageStudio() {
                     minWidth={24}
                     onChange={(_, percentCrop) => setCrops((current) => ({ ...current, [selected.id]: percentCrop }))}
                     keepSelection
+                    style={{ touchAction: 'none' }}
                   >
-                    <img src={selected.sourceUrl} alt={selected.file.name} draggable={false} />
+                    <img
+                      src={selected.sourceUrl}
+                      alt={selected.file.name}
+                      draggable={false}
+                      style={{ touchAction: 'none' }}
+                    />
                   </ReactCrop>
                 )}
                 {selected && previewResultUrl && previewView === 'result' && (
@@ -772,7 +767,7 @@ export default function ImageStudio() {
                 <span className="step-count">01—04</span>
               </div>
 
-              <div className="control-section">
+              <div className="control-section crop-control">
                 <label className="control-label"><b>01</b>{t.cropRatio}</label>
                 <div className="ratio-grid">
                   {standardRatioPresets.map((preset) => (
@@ -821,7 +816,7 @@ export default function ImageStudio() {
                 )}
               </div>
 
-              <div className="control-section">
+              <div className="control-section resize-control">
                 <label className="control-label"><b>02</b>{t.resize}</label>
                 <div className="segmented">
                   <button className={resizeMode === 'pixels' ? 'active' : ''} onClick={() => setResizeMode('pixels')}>{t.pixels}</button>
@@ -841,7 +836,7 @@ export default function ImageStudio() {
                 )}
               </div>
 
-              <div className="control-section">
+              <div className="control-section format-control">
                 <label className="control-label"><b>03</b>{t.format}</label>
                 <div className="format-grid">
                   {(['jpeg', 'png', 'webp'] as OutputFormat[]).map((value) => (
