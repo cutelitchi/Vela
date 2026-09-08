@@ -38,7 +38,9 @@ Website: [picsizekit.com](https://picsizekit.com)
 | Format conversion | Export JPEG, PNG or WebP |
 | Quality control | Quality slider for JPEG and WebP; lossless PNG output |
 | Live size comparison | See estimated output dimensions, file size and savings while changing size, format or quality |
-| Flexible downloads | Download one image or package all results into a ZIP |
+| Process and download | Progress appears on the main button, which becomes an animated download prompt when ready; individual files or batch ZIP |
+| Configure before import | Explore and adjust all settings before choosing images; your preferences carry over |
+| Compact workspace | Side-by-side panels without a separate queue; switch batch previews with a compact selector |
 | EXIF privacy | Private metadata is removed by default; JPEG → JPEG preservation is optional |
 | Bilingual UI | Switch between Chinese and English from the page header with a saved local preference |
 

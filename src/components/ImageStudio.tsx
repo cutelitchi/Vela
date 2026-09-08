@@ -68,14 +68,12 @@ const dictionaries = {
     process: '处理图片',
     processing: '正在处理…',
     download: '下载',
-    downloadAll: '下载全部 ZIP',
-    remove: '移除',
     clear: '清空',
     images: '张图片',
+    image: '张图片',
     before: '处理前',
     after: '处理后',
     saved: '节省',
-    waiting: '调整参数后点击“处理图片”生成结果',
     cropHelp: '拖动或缩放选框来决定保留范围。',
     previewHelp: '双击图片进入影院预览',
     theaterHelp: '双击图片或按 Esc 退出影院预览',
@@ -84,7 +82,16 @@ const dictionaries = {
     photoRatios: '中国常用证件照',
     photoRatioHint: '预设按毫米尺寸锁定裁剪比例，提交前请核对办理方的像素要求。',
     settings: '处理设置',
-    queue: '图片队列',
+    featureSummary: '裁剪 · 缩放 · 格式转换 · 压缩 · 隐私清理',
+    configureFirst: '可以先调整设置，再选择图片。',
+    comparisonHint: '选择图片后，这里实时显示处理前后的体积与像素。',
+    chooseStart: '选择图片开始',
+    ready: '处理完成 · 点击下载',
+    readyZip: '处理完成 · 点击下载 ZIP',
+    packing: '正在打包…',
+    selectImage: '切换预览图片',
+    failed: '张处理失败，请调整参数后重试。',
+    errorDownload: '下载准备失败，请重新点击下载。',
     localBadge: 'LOCAL ONLY',
     errorType: '请选择 JPEG、PNG 或 WebP 图片。',
     errorRead: '无法读取图片。',
@@ -124,14 +131,12 @@ const dictionaries = {
     process: 'Process images',
     processing: 'Processing…',
     download: 'Download',
-    downloadAll: 'Download all as ZIP',
-    remove: 'Remove',
     clear: 'Clear',
     images: 'images',
+    image: 'image',
     before: 'Before',
     after: 'After',
     saved: 'saved',
-    waiting: 'Adjust the settings, then process the images to see results',
     cropHelp: 'Move or resize the selection to choose what stays.',
     previewHelp: 'Double-click the image for theater preview',
     theaterHelp: 'Double-click the image or press Esc to exit',
@@ -140,7 +145,16 @@ const dictionaries = {
     photoRatios: 'Common Chinese ID photos',
     photoRatioHint: 'Presets lock the crop ratio by millimeter size. Confirm the required pixel dimensions before submission.',
     settings: 'Processing settings',
-    queue: 'Image queue',
+    featureSummary: 'Crop · Resize · Convert · Compress · EXIF',
+    configureFirst: 'Set your preferences, then choose images.',
+    comparisonHint: 'Choose an image to compare file size and pixels here in real time.',
+    chooseStart: 'Choose images to start',
+    ready: 'Ready — click to download',
+    readyZip: 'Ready — click to download ZIP',
+    packing: 'Preparing ZIP…',
+    selectImage: 'Select image to preview',
+    failed: 'image(s) failed. Adjust settings and retry.',
+    errorDownload: 'Could not prepare the download. Click to try again.',
     localBadge: 'LOCAL ONLY',
     errorType: 'Please choose JPEG, PNG or WebP images.',
     errorRead: 'This image could not be read.',
@@ -288,6 +302,10 @@ export default function ImageStudio() {
   const [quality, setQuality] = useState(82);
   const [stripMetadata, setStripMetadata] = useState(true);
   const [processing, setProcessing] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [processedSignature, setProcessedSignature] = useState('');
+  const [packing, setPacking] = useState(false);
+  const sizeEditedRef = useRef(false);
   const [dragging, setDragging] = useState(false);
   const [notice, setNotice] = useState('');
   const [previewView, setPreviewView] = useState<'source' | 'result'>('source');
@@ -338,11 +356,10 @@ export default function ImageStudio() {
   }, []);
 
   const activeAspect = useMemo(() => {
-    if (!selected) return 1;
-    if (ratioKey === 'original') return selected.width / selected.height;
+    if (ratioKey === 'original') return selected ? selected.width / selected.height : targetWidth / targetHeight;
     if (ratioKey === 'custom') return Math.max(0.01, customRatio.width / customRatio.height);
-    return ratioPresets.find((preset) => preset.key === ratioKey)?.value || selected.width / selected.height;
-  }, [selected, ratioKey, customRatio]);
+    return ratioPresets.find((preset) => preset.key === ratioKey)?.value || 1;
+  }, [selected, ratioKey, customRatio, targetWidth, targetHeight]);
 
   const currentCrop = selected
     ? crops[selected.id] ?? centeredCrop(selected.width, selected.height, activeAspect)
@@ -353,6 +370,7 @@ export default function ImageStudio() {
     : '';
 
   useEffect(() => {
+    const jobId = ++estimateJobRef.current;
     if (!selected) {
       if (estimateUrlRef.current) URL.revokeObjectURL(estimateUrlRef.current);
       estimateUrlRef.current = undefined;
@@ -360,7 +378,6 @@ export default function ImageStudio() {
       setEstimating(false);
       return;
     }
-    const jobId = ++estimateJobRef.current;
     setEstimating(true);
     const timer = window.setTimeout(async () => {
       try {
@@ -382,7 +399,7 @@ export default function ImageStudio() {
         if (jobId === estimateJobRef.current) setEstimating(false);
       }
     }, 260);
-    return () => window.clearTimeout(timer);
+    return () => { window.clearTimeout(timer); estimateJobRef.current += 1; };
   }, [selectedId, cropSignature, resizeMode, targetWidth, targetHeight, scalePercent, format, quality, stripMetadata, ratioKey, activeAspect]);
 
   useEffect(() => () => {
@@ -470,49 +487,52 @@ export default function ImageStudio() {
     }
     setItems((current) => [...current, ...valid]);
     setSelectedId((current) => current || valid[0].id);
-    if (items.length === 0) {
+    if (items.length === 0 && !sizeEditedRef.current) {
       setTargetWidth(valid[0].width);
-      setTargetHeight(valid[0].height);
+      setTargetHeight(locked && ratioKey !== 'original' ? clampDimension(valid[0].width / activeAspect) : valid[0].height);
     }
     setNotice('');
   }
 
   function updateRatio(nextKey: string) {
     setRatioKey(nextKey);
-    if (!selected) return;
     const nextAspect = nextKey === 'original'
-      ? selected.width / selected.height
+      ? selected ? selected.width / selected.height : targetWidth / targetHeight
       : nextKey === 'custom'
         ? customRatio.width / customRatio.height
         : ratioPresets.find((preset) => preset.key === nextKey)?.value || 1;
-    setCrops((current) => ({ ...current, [selected.id]: centeredCrop(selected.width, selected.height, nextAspect) }));
+    // A preset applies to the batch; custom per-image crops can be adjusted afterwards.
+    setCrops({});
     if (locked) setTargetHeight(clampDimension(targetWidth / nextAspect));
   }
 
   function updateCustomRatio(part: 'width' | 'height', value: number) {
     const next = { ...customRatio, [part]: Math.max(1, value || 1) };
     setCustomRatio(next);
-    if (ratioKey === 'custom' && selected) {
+    if (ratioKey === 'custom') {
       const aspect = next.width / next.height;
-      setCrops((current) => ({ ...current, [selected.id]: centeredCrop(selected.width, selected.height, aspect) }));
+      setCrops({});
       if (locked) setTargetHeight(clampDimension(targetWidth / aspect));
     }
   }
 
   function updateWidth(value: number) {
+    sizeEditedRef.current = true;
     const nextWidth = clampDimension(value);
     setTargetWidth(nextWidth);
     if (locked) setTargetHeight(clampDimension(nextWidth / activeAspect));
   }
 
   function updateHeight(value: number) {
+    sizeEditedRef.current = true;
     const nextHeight = clampDimension(value);
     setTargetHeight(nextHeight);
     if (locked) setTargetWidth(clampDimension(nextHeight * activeAspect));
   }
 
-  async function processItem(item: ImageItem) {
+  async function processItem(item: ImageItem, onProgress?: (fraction: number) => void) {
     const image = await loadImage(item.sourceUrl);
+    onProgress?.(0.1);
     const crop = crops[item.id] ?? centeredCrop(item.width, item.height, ratioKey === 'original' ? item.width / item.height : activeAspect);
     const sx = Math.max(0, Math.round((crop.x / 100) * item.width));
     const sy = Math.max(0, Math.round((crop.y / 100) * item.height));
@@ -536,6 +556,7 @@ export default function ImageStudio() {
     }
     context.drawImage(image, sx, sy, sw, sh, 0, 0, sw, sh);
 
+    onProgress?.(0.25);
     const outputCanvas = document.createElement('canvas');
     outputCanvas.width = outputWidth;
     outputCanvas.height = outputHeight;
@@ -545,22 +566,26 @@ export default function ImageStudio() {
       unsharpRadius: 0.6,
       unsharpThreshold: 2,
     });
+    onProgress?.(0.8);
     const mime = `image/${format}`;
     let outputBlob = await picaInstance.toBlob(outputCanvas, mime, format === 'png' ? undefined : quality / 100);
     if (!stripMetadata && item.file.type === 'image/jpeg' && format === 'jpeg') {
       outputBlob = await preserveJpegMetadata(item.file, outputBlob);
     }
+    onProgress?.(1);
     return { outputBlob, outputWidth, outputHeight };
   }
 
   async function processAll() {
-    if (!items.length) return;
+    if (!items.length || processing || packing) return;
+    setProgress(0);
+    setProcessedSignature('');
     setProcessing(true);
     setNotice('');
     const results: ImageItem[] = [];
-    for (const item of items) {
+    for (const [index, item] of items.entries()) {
       try {
-        const result = await processItem(item);
+        const result = await processItem(item, (fraction) => setProgress(Math.round((index + fraction) / items.length * 100)));
         if (item.outputUrl) URL.revokeObjectURL(item.outputUrl);
         results.push({
           ...item,
@@ -569,17 +594,23 @@ export default function ImageStudio() {
           error: undefined,
         });
       } catch {
-        results.push({ ...item, error: t.errorProcess });
+        if (item.outputUrl) URL.revokeObjectURL(item.outputUrl);
+        results.push({ ...item, outputBlob: undefined, outputUrl: undefined, outputWidth: undefined, outputHeight: undefined, error: t.errorProcess });
       }
     }
     setItems(results);
+    setProgress(100);
+    setProcessedSignature(settingsSignature);
+    const failures = results.filter((item) => item.error).length;
+    if (failures) setNotice(`${failures} ${t.failed}`);
     if (results.some((item) => item.outputBlob)) setPreviewView('result');
     setProcessing(false);
   }
 
   function outputFilename(item: ImageItem) {
     const base = item.file.name.replace(/\.[^.]+$/, '') || 'image';
-    const extension = format === 'jpeg' ? 'jpg' : format;
+    const outputFormat = item.outputBlob?.type.split('/')[1] ?? format;
+    const extension = outputFormat === 'jpeg' ? 'jpg' : outputFormat;
     return `${base}-picsizekit.${extension}`;
   }
 
@@ -592,35 +623,37 @@ export default function ImageStudio() {
     window.setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
 
-  async function downloadZip() {
+  async function downloadResults() {
+    if (packing || !downloadReady) return;
     const completed = items.filter((item) => item.outputBlob);
-    if (!completed.length) return;
-    const entries: Record<string, Uint8Array> = {};
-    for (const item of completed) {
-      entries[outputFilename(item)] = new Uint8Array(await item.outputBlob!.arrayBuffer());
+    if (completed.length === 1) {
+      triggerDownload(completed[0].outputBlob!, outputFilename(completed[0]));
+      return;
     }
-    triggerDownload(new Blob([zipSync(entries)], { type: 'application/zip' }), 'picsizekit-images.zip');
-  }
-
-  function removeItem(id: string) {
-    setItems((current) => {
-      const target = current.find((item) => item.id === id);
-      if (target) {
-        URL.revokeObjectURL(target.sourceUrl);
-        if (target.outputUrl) URL.revokeObjectURL(target.outputUrl);
+    setPacking(true);
+    try {
+      const entries: Record<string, Uint8Array> = {};
+      for (const item of completed) {
+        const filename = outputFilename(item);
+        let uniqueName = filename;
+        let suffix = 2;
+        while (entries[uniqueName]) uniqueName = filename.replace(/(\.[^.]+)$/, `-${suffix++}$1`);
+        entries[uniqueName] = new Uint8Array(await item.outputBlob!.arrayBuffer());
       }
-      const next = current.filter((item) => item.id !== id);
-      if (selectedId === id) setSelectedId(next[0]?.id ?? '');
-      return next;
-    });
-    setCrops((current) => {
-      const next = { ...current };
-      delete next[id];
-      return next;
-    });
+      triggerDownload(new Blob([zipSync(entries, { level: 0 })], { type: 'application/zip' }), 'picsizekit-images.zip');
+    } catch {
+      setNotice(t.errorDownload);
+    } finally {
+      setPacking(false);
+    }
   }
 
   function clearAll() {
+    setProcessedSignature('');
+    setProgress(0);
+    setNotice('');
+    sizeEditedRef.current = false;
+    estimateJobRef.current += 1;
     items.forEach((item) => {
       URL.revokeObjectURL(item.sourceUrl);
       if (item.outputUrl) URL.revokeObjectURL(item.outputUrl);
@@ -634,6 +667,8 @@ export default function ImageStudio() {
     closeTheater();
   }
 
+  const settingsSignature = JSON.stringify([items.map((item) => item.id), crops, ratioKey, customRatio, resizeMode, targetWidth, targetHeight, scalePercent, format, quality, stripMetadata]);
+  const downloadReady = processedSignature === settingsSignature && items.some((item) => item.outputBlob);
   const completedCount = items.filter((item) => item.outputBlob).length;
   const selectedEstimate = liveEstimate?.itemId === selected?.id ? liveEstimate : undefined;
   const previewResultUrl = selectedEstimate?.url ?? selected?.outputUrl;
@@ -663,7 +698,7 @@ export default function ImageStudio() {
         </div>
       </header>
 
-      <section className={`intro-strip ${items.length ? 'workspace-active' : ''}`}>
+      <section className="intro-strip workspace-active">
         <div>
           <span className="section-index">01 / IMAGE LAB</span>
           <h1>{t.headline}</h1>
@@ -675,7 +710,20 @@ export default function ImageStudio() {
         </div>
       </section>
 
-      {items.length === 0 ? (
+      <section className="workspace-heading">
+        <span className="section-index">02 / {t.workspace.toUpperCase()}</span>
+        {items.length > 0 && <div className="workspace-actions">
+          {items.length > 1 && <label className="image-selector">
+            <span>{items.length} {t.images}</span>
+            <select aria-label={t.selectImage} value={selected?.id} disabled={processing || packing} onChange={(event) => setSelectedId(event.target.value)}>
+              {items.map((item, index) => <option key={item.id} value={item.id}>{index + 1}. {item.file.name}</option>)}
+            </select>
+          </label>}
+          <button className="button subtle danger" disabled={processing || packing} onClick={clearAll}>{t.clear}</button>
+        </div>}
+      </section>
+      <section className="workspace-grid">
+        {items.length === 0 ? (
         <section
           className={`drop-zone ${dragging ? 'dragging' : ''}`}
           onDragEnter={(event) => { event.preventDefault(); setDragging(true); }}
@@ -691,6 +739,8 @@ export default function ImageStudio() {
             <span className="upload-icon"><IconUpload /></span>
             <strong>{t.choose}</strong>
             <small>{t.chooseNote}</small>
+            <span className="feature-overview">{t.featureSummary}</span>
+            <span className="configure-first">{t.configureFirst}</span>
           </button>
           <input
             ref={fileInputRef}
@@ -702,18 +752,9 @@ export default function ImageStudio() {
           />
           <span className="corner corner-tl" /><span className="corner corner-tr" />
           <span className="corner corner-bl" /><span className="corner corner-br" />
-          {notice && <p className="notice error">{notice}</p>}
-        </section>
-      ) : (
-        <>
-          <section className="workspace-heading">
-            <div><span className="section-index">02 / {t.workspace.toUpperCase()}</span></div>
-            <div className="workspace-actions">
-              <button className="button subtle danger" onClick={clearAll}>{t.clear}</button>
-            </div>
-          </section>
 
-          <section className="workspace-grid">
+        </section>
+        ) : (
             <div className="preview-panel panel">
               <div className="panel-heading">
                 <div className="preview-tabs">
@@ -733,6 +774,7 @@ export default function ImageStudio() {
               >
                 {selected && previewView === 'source' && (
                   <ReactCrop
+                    disabled={processing || packing}
                     crop={currentCrop}
                     aspect={activeAspect}
                     minWidth={24}
@@ -761,7 +803,8 @@ export default function ImageStudio() {
               </div>
             </div>
 
-            <aside className="settings-panel panel">
+        )}
+            <fieldset className="settings-panel panel" disabled={processing || packing} aria-label={t.settings}>
               <div className="panel-heading">
                 <strong>{t.settings}</strong>
                 <span className="step-count">01—04</span>
@@ -831,7 +874,7 @@ export default function ImageStudio() {
                 ) : (
                   <div className="range-control">
                     <div><span>{t.scale}</span><strong>{scalePercent}%</strong></div>
-                    <input type="range" min="5" max="200" step="5" value={scalePercent} onChange={(event) => setScalePercent(Number(event.target.value))} />
+                    <input aria-label={t.scale} type="range" min="5" max="200" step="5" value={scalePercent} onChange={(event) => setScalePercent(Number(event.target.value))} />
                   </div>
                 )}
               </div>
@@ -846,10 +889,10 @@ export default function ImageStudio() {
                 {format === 'png' ? <p className="hint">{t.pngHint}</p> : (
                   <div className="range-control quality">
                     <div><span>{t.quality}</span><strong>{quality}</strong></div>
-                    <input type="range" min="20" max="100" value={quality} onChange={(event) => setQuality(Number(event.target.value))} />
+                    <input aria-label={t.quality} type="range" min="20" max="100" value={quality} onChange={(event) => setQuality(Number(event.target.value))} />
                   </div>
                 )}
-                {selected && (
+                {selected ? (
                   <div className="live-comparison" aria-label={t.liveComparison}>
                     <div>
                       <small>{t.source}</small>
@@ -868,13 +911,14 @@ export default function ImageStudio() {
                       </em>
                     )}
                   </div>
-                )}
+                ) : <p className="comparison-placeholder">{t.comparisonHint}</p>}
               </div>
 
               <div className="control-section metadata-control">
                 <label className="control-label"><b>04</b>{t.metadata}</label>
                 <button
                   role="switch"
+                  aria-label={t.metadata}
                   aria-checked={stripMetadata}
                   className={`switch ${stripMetadata ? 'active' : ''}`}
                   onClick={() => setStripMetadata((value) => !value)}
@@ -882,47 +926,26 @@ export default function ImageStudio() {
                 <p className="hint">{stripMetadata ? t.metadataHint : t.preserveHint}</p>
               </div>
 
-              <button className="process-button" disabled={processing} onClick={() => void processAll()}>
-                <span>{processing ? t.processing : t.process}</span>
-                <span>→</span>
-              </button>
-              {notice && <p className="notice error">{notice}</p>}
-            </aside>
+              <div className="process-action" aria-live="polite" aria-atomic="true">
+                <button
+                  className={`process-button ${processing ? 'is-processing' : ''} ${downloadReady ? 'is-ready' : ''}`}
+                  disabled={processing || packing}
+                  aria-busy={processing || packing}
+                  onClick={() => !items.length ? fileInputRef.current?.click() : downloadReady ? void downloadResults() : void processAll()}
+                >
+                  {processing && <i className="process-fill" style={{ width: `${progress}%` }} aria-hidden="true" />}
+                  <span>{packing ? t.packing : processing ? `${t.processing} ${progress}%` : downloadReady ? (completedCount > 1 ? t.readyZip : t.ready) : items.length ? t.process : t.chooseStart}</span>
+                  <span>{processing ? `${Math.min(items.length, Math.floor(progress / 100 * items.length) + 1)} / ${items.length}` : downloadReady ? <IconDownload /> : '→'}</span>
+                </button>
+                {downloadReady && <div className="download-details">
+                  <span>✓ {completedCount} {completedCount === 1 ? t.image : t.images} · {formatBytes(items.reduce((total, item) => total + (item.outputBlob?.size ?? 0), 0))}</span>
+                  {completedCount > 1 && selected?.outputBlob && <button onClick={() => triggerDownload(selected.outputBlob!, outputFilename(selected))}>{t.download} #{items.indexOf(selected) + 1}</button>}
+                  {completedCount < items.length && <button onClick={() => void processAll()}>{t.process}</button>}
+                </div>}
+              </div>
+              {notice && <p className="notice error" role="alert">{notice}</p>}
+            </fieldset>
           </section>
-
-          <section className="queue-section panel">
-            <div className="panel-heading queue-heading">
-              <strong>{t.queue} <span>{items.length} {t.images}</span></strong>
-              {completedCount > 1 && <button className="button primary" onClick={() => void downloadZip()}><IconDownload />{t.downloadAll}</button>}
-            </div>
-            <div className="queue-list">
-              {items.map((item) => {
-                const savedPercent = item.outputBlob ? Math.round((1 - item.outputBlob.size / item.file.size) * 100) : 0;
-                return (
-                  <article key={item.id} className={`queue-item ${item.id === selected?.id ? 'selected' : ''}`} onClick={() => setSelectedId(item.id)}>
-                    <img src={item.sourceUrl} alt="" />
-                    <div className="queue-name">
-                      <strong title={item.file.name}>{item.file.name}</strong>
-                      <span>{item.width} × {item.height} · {formatBytes(item.file.size)}</span>
-                    </div>
-                    {item.outputBlob ? (
-                      <div className="queue-result">
-                        <span>{item.outputWidth} × {item.outputHeight}</span>
-                        <strong>{formatBytes(item.outputBlob.size)}</strong>
-                        <em className={savedPercent >= 0 ? 'positive' : 'negative'}>{savedPercent >= 0 ? '−' : '+'}{Math.abs(savedPercent)}%</em>
-                      </div>
-                    ) : item.error ? <span className="item-error">{item.error}</span> : <span className="waiting">{t.waiting}</span>}
-                    <div className="queue-buttons">
-                      {item.outputBlob && <button aria-label={t.download} title={t.download} onClick={(event) => { event.stopPropagation(); triggerDownload(item.outputBlob!, outputFilename(item)); }}><IconDownload /></button>}
-                      <button aria-label={t.remove} title={t.remove} onClick={(event) => { event.stopPropagation(); removeItem(item.id); }}>×</button>
-                    </div>
-                  </article>
-                );
-              })}
-            </div>
-          </section>
-        </>
-      )}
 
       {theaterMode && selected && (
         <div
