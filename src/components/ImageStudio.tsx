@@ -735,11 +735,20 @@ export default function ImageStudio() {
     : selected && currentCrop
       ? selected.width * currentCrop.width / 100 * scalePercent / 100
       : targetWidth;
-  const framePreviewSize = cropContentWidth > 0
+  const cropContentHeight = resizeMode === 'pixels'
+    ? targetHeight
+    : selected && currentCrop
+      ? selected.height * currentCrop.height / 100 * scalePercent / 100
+      : targetHeight;
+  const framePreviewWidth = cropContentWidth > 0
     ? Math.min(60, frameWidth / cropContentWidth * 100)
     : 0;
+  const framePreviewHeight = cropContentHeight > 0
+    ? Math.min(60, frameWidth / cropContentHeight * 100)
+    : 0;
   const framePreviewStyle = {
-    '--frame-preview-size': `${framePreviewSize}%`,
+    '--frame-preview-width': `${framePreviewWidth}%`,
+    '--frame-preview-height': `${framePreviewHeight}%`,
     '--frame-preview-color': frameColor,
   } as CSSProperties;
 

@@ -184,6 +184,9 @@ for (const touch of [false, true]) {
       await expect(framePreview).toHaveClass(/all/);
       await expect(framePreview.locator('.frame-top')).toHaveCSS('background-color', 'rgb(214, 201, 180)');
       await expect(framePreview.locator('.frame-top')).toHaveCSS('border-radius', '0px');
+      const topFrame = (await framePreview.locator('.frame-top').boundingBox())!;
+      const leftFrame = (await framePreview.locator('.frame-left').boundingBox())!;
+      expect(Math.abs(topFrame.height - leftFrame.width)).toBeLessThan(1);
       await page.getByRole('button', { name: 'Top & bottom', exact: true }).click();
       await expect(framePreview).toHaveClass(/bars/);
       await expect(framePreview.locator('.frame-left')).toHaveCSS('display', 'none');

@@ -105,12 +105,12 @@ svg { width: 1.15rem; height: 1.15rem; fill: none; stroke: currentColor; stroke-
 .crop-stage .ReactCrop__selection-addon { pointer-events: none; }
 .frame-live-preview { position: absolute; inset: 0; pointer-events: none; }
 .frame-edge { position: absolute; display: block; background: var(--frame-preview-color); border-radius: 0; }
-.frame-top, .frame-bottom { left: calc(-1 * var(--frame-preview-size)); right: calc(-1 * var(--frame-preview-size)); height: var(--frame-preview-size); }
-.frame-top { top: calc(-1 * var(--frame-preview-size)); }
-.frame-bottom { bottom: calc(-1 * var(--frame-preview-size)); }
-.frame-left, .frame-right { top: 0; bottom: 0; width: var(--frame-preview-size); }
-.frame-left { left: calc(-1 * var(--frame-preview-size)); }
-.frame-right { right: calc(-1 * var(--frame-preview-size)); }
+.frame-top, .frame-bottom { left: calc(-1 * var(--frame-preview-width)); right: calc(-1 * var(--frame-preview-width)); height: var(--frame-preview-height); }
+.frame-top { top: calc(-1 * var(--frame-preview-height)); }
+.frame-bottom { bottom: calc(-1 * var(--frame-preview-height)); }
+.frame-left, .frame-right { top: 0; bottom: 0; width: var(--frame-preview-width); }
+.frame-left { left: calc(-1 * var(--frame-preview-width)); }
+.frame-right { right: calc(-1 * var(--frame-preview-width)); }
 .frame-live-preview.bars .frame-left, .frame-live-preview.bars .frame-right { display: none; }
 .frame-live-preview.bars .frame-top, .frame-live-preview.bars .frame-bottom { left: 0; right: 0; }
 .crop-stage img { display: block; max-width: 100%; max-height: clamp(330px, calc(100vh - 375px), 680px); object-fit: contain; -webkit-user-drag: none; }
