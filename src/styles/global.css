@@ -234,7 +234,7 @@ footer p { margin: 0; }
   .button.subtle svg { display: none; }
   .crop-stage { min-height: 300px; height: clamp(300px, 52vh, 460px); padding: 12px; }
   .crop-stage img { max-height: calc(52vh - 24px); }
-  .crop-stage .ReactCrop { --rc-drag-handle-mobile-size: 32px; }
+
   .ratio-grid { grid-template-columns: repeat(3, 1fr); }
   .photo-ratio-grid { grid-template-columns: repeat(2, 1fr); }
   .preview-hint { display: none; }
@@ -252,6 +252,11 @@ footer p { margin: 0; }
   *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; animation: none !important; }
 }
 
-@media (pointer: coarse) {
-  .ReactCrop__drag-handle { width: 28px; height: 28px; }
+.touch-crop { display: inline-flex; max-width: 100%; max-height: 100%; touch-action: none; }
+.touch-crop img { -webkit-touch-callout: none; }
+@media (any-pointer: coarse), (max-width: 640px) {
+  .crop-stage .ReactCrop__drag-handle { width: 44px; height: 44px; border: 0; background: transparent; touch-action: none; z-index: 2; }
+  .crop-stage .ReactCrop__drag-handle::after { content: ''; position: absolute; inset: 13px; background: var(--cyan); border: 2px solid var(--ink); border-radius: 4px; pointer-events: none; }
+  .crop-stage .ReactCrop__drag-handle:focus-visible::after { outline: 2px solid white; }
+  .crop-help { padding: 9px 12px; line-height: 1.5; }
 }

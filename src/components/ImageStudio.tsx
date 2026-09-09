@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import ReactCrop, {
+import {
   centerCrop,
   makeAspectCrop,
   type PercentCrop,
 } from 'react-image-crop';
+import TouchCrop from './TouchCrop';
 import pica from 'pica';
 import { zipSync } from 'fflate';
 import piexif from 'piexifjs';
@@ -74,7 +75,7 @@ const dictionaries = {
     before: '处理前',
     after: '处理后',
     saved: '节省',
-    cropHelp: '拖动或缩放选框来决定保留范围。',
+    cropHelp: '拖动选框移动，拖动四角或双指捏合调整大小。',
     previewHelp: '双击图片进入影院预览',
     theaterHelp: '双击图片或按 Esc 退出影院预览',
     theaterLoading: '正在生成裁剪区域预览…',
@@ -137,7 +138,7 @@ const dictionaries = {
     before: 'Before',
     after: 'After',
     saved: 'saved',
-    cropHelp: 'Move or resize the selection to choose what stays.',
+    cropHelp: 'Drag to move. Drag a corner or pinch with two fingers to resize.',
     previewHelp: 'Double-click the image for theater preview',
     theaterHelp: 'Double-click the image or press Esc to exit',
     theaterLoading: 'Preparing the cropped-area preview…',
@@ -773,7 +774,7 @@ export default function ImageStudio() {
                 title={t.previewHelp}
               >
                 {selected && previewView === 'source' && (
-                  <ReactCrop
+                  <TouchCrop
                     disabled={processing || packing}
                     crop={currentCrop}
                     aspect={activeAspect}
@@ -788,7 +789,7 @@ export default function ImageStudio() {
                       draggable={false}
                       style={{ touchAction: 'none' }}
                     />
-                  </ReactCrop>
+                  </TouchCrop>
                 )}
                 {selected && previewResultUrl && previewView === 'result' && (
                   <img className="result-preview" src={previewResultUrl} alt={`${selected.file.name} ${t.result}`} />

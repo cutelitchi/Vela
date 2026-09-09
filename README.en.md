@@ -34,6 +34,7 @@ Website: [picsizekit.com](https://picsizekit.com)
 | Drag, drop and batch select | Import multiple JPEG, PNG and WebP images |
 | Precise sizing | Resize by pixels or percentage and lock the aspect ratio |
 | Visual crop tool | Common screen ratios, 1.85:1/2.35:1/2.39:1 cinema formats and Chinese ID photo presets |
+| Touch cropping | Drag to move, resize with 44px corner targets or pinch with two fingers; selection stays within the image |
 | Theater preview | Double-click the crop area to preview exactly what is inside the selection; double-click again or press Esc to exit |
 | Format conversion | Export JPEG, PNG or WebP |
 | Quality control | Quality slider for JPEG and WebP; lossless PNG output |
@@ -104,3 +105,7 @@ Use a current stable release of Chrome, Edge, Firefox or Safari. Very large imag
 ## License
 
 The project is distributed under the repository's [LICENSE](LICENSE).
+
+## Crop regression tests
+
+With Chrome installed, run `npm test`. Tests generate local fixtures and cover touch corners, pinch resizing, bounds, gesture cancellation, downloads, desktop mouse resizing and theater preview. Browser emulation does not replace testing on a physical iPhone.
