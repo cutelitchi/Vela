@@ -87,6 +87,22 @@ test.describe('Mobile touch input', () => {
     await page.getByRole('button', { name: 'Ready — click to download', exact: true }).click();
     expect((await download).suggestedFilename()).toBe('touch-picsizekit.webp');
   });
+
+  test('shows the mobile hint and opens theater mode from a double-tap inside the crop', async ({ page, context }) => {
+    await loadFixture(page);
+    const hint = page.locator('.preview-hint');
+    await expect(hint).toBeVisible();
+    await expect(hint).toContainText('double-tap');
+    const selection = (await page.locator('.ReactCrop__crop-selection').boundingBox())!;
+    const point = { x: selection.x + selection.width / 2, y: selection.y + selection.height / 2 };
+    const cdp = await context.newCDPSession(page);
+    for (let tap = 0; tap < 2; tap++) {
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchStart', touchPoints: [point] });
+      await cdp.send('Input.dispatchTouchEvent', { type: 'touchEnd', touchPoints: [] });
+      await page.waitForTimeout(80);
+    }
+    await expect(page.getByRole('dialog')).toBeVisible();
+  });
 });
 
 test('desktop mouse corner resizing and double-click preview still work', async ({ page }) => {

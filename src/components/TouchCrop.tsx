@@ -8,22 +8,27 @@ type Gesture = {
   corner?: string;
   width: number;
   height: number;
+  moved: boolean;
 };
+type TouchCropProps = ReactCropProps & { onDoubleTap?: () => void };
 const clamp = (value: number, min: number, max: number) => Math.max(min, Math.min(max, value));
 const midpoint = (points: Point[]) => ({ x: (points[0].x + points[1].x) / 2, y: (points[0].y + points[1].y) / 2 });
 const distance = (points: Point[]) => Math.hypot(points[1].x - points[0].x, points[1].y - points[0].y);
+const pointDistance = (a: Point, b: Point) => Math.hypot(b.x - a.x, b.y - a.y);
 
 /** Native non-passive touch listeners keep iOS crop gestures separate from page gestures.
  * Mouse, pen and keyboard interactions remain with ReactCrop.
  */
-export default function TouchCrop(props: ReactCropProps) {
+export default function TouchCrop(props: TouchCropProps) {
   const hostRef = useRef<HTMLDivElement>(null);
   const latest = useRef(props);
   latest.current = props;
+  const { onDoubleTap: _onDoubleTap, ...cropProps } = props;
 
   useEffect(() => {
     const host = hostRef.current!;
     let gesture: Gesture | undefined;
+    let lastTap: { time: number; point: Point } | undefined;
     const pointsFor = (event: TouchEvent) => Array.from(event.touches).filter((touch) => touch.target instanceof Node && host.contains(touch.target)).slice(0, 2).map((touch) => ({ x: touch.clientX, y: touch.clientY }));
 
     const begin = (event: TouchEvent) => {
@@ -43,6 +48,7 @@ export default function TouchCrop(props: ReactCropProps) {
       gesture = {
         crop: pixelCrop, points, width: box.width, height: box.height,
         corner: points.length === 1 ? target?.closest<HTMLElement>('[data-ord]')?.dataset.ord : undefined,
+        moved: false,
       };
     };
 
@@ -52,6 +58,7 @@ export default function TouchCrop(props: ReactCropProps) {
       const points = pointsFor(event);
       if (!points.length) return;
       if (points.length !== gesture.points.length) { begin(event); return; }
+      if (points.some((point, index) => pointDistance(gesture!.points[index], point) > 8)) gesture.moved = true;
       const { crop, width: boundsWidth, height: boundsHeight, corner, points: start } = gesture;
       const next = { ...crop };
       const aspect = crop.width / crop.height;
@@ -89,8 +96,20 @@ export default function TouchCrop(props: ReactCropProps) {
     const end = (event: TouchEvent) => {
       if (!gesture) return;
       if (event.cancelable) event.preventDefault();
+      const finishedGesture = gesture;
+      const remainingPoints = pointsFor(event);
       gesture = undefined;
-      if (event.type !== 'touchcancel' && pointsFor(event).length) {
+      if (event.type === 'touchend' && !finishedGesture.moved && finishedGesture.points.length === 1 && !remainingPoints.length) {
+        const now = performance.now();
+        const point = finishedGesture.points[0];
+        if (lastTap && now - lastTap.time < 420 && pointDistance(lastTap.point, point) < 36) {
+          lastTap = undefined;
+          latest.current.onDoubleTap?.();
+        } else {
+          lastTap = { time: now, point };
+        }
+      }
+      if (event.type !== 'touchcancel' && remainingPoints.length) {
         begin(event);
         // After a pinch, the remaining finger moves the crop instead of grabbing a corner.
         if (gesture) (gesture as Gesture).corner = undefined;
@@ -112,5 +131,5 @@ export default function TouchCrop(props: ReactCropProps) {
   return <div ref={hostRef} className="touch-crop" onPointerDownCapture={(event) => {
     // Avoid running both the library's pointer drag and the native touch gesture.
     if (event.pointerType === 'touch') event.stopPropagation();
-  }}><ReactCrop {...props} /></div>;
+  }}><ReactCrop {...cropProps} /></div>;
 }

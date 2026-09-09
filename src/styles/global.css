@@ -266,7 +266,7 @@ footer p { margin: 0; }
 
   .ratio-grid { grid-template-columns: repeat(3, 1fr); }
   .photo-ratio-grid { grid-template-columns: repeat(2, 1fr); }
-  .preview-hint { display: none; }
+  .preview-hint { display: block; right: 10px; bottom: 10px; max-width: calc(100% - 20px); text-align: right; line-height: 1.35; }
   .theater-overlay { padding: 14px; }
   .theater-close { right: 14px; top: 14px; }
   .workspace-grid > .drop-zone { min-height: 280px; }

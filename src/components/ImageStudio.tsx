@@ -83,7 +83,7 @@ const dictionaries = {
     after: '处理后',
     saved: '节省',
     cropHelp: '拖动选框移动，拖动四角或双指捏合调整大小。',
-    previewHelp: '双击图片进入影院预览',
+    previewHelp: '双击或连续轻点两次进入影院预览',
     theaterHelp: '双击图片或按 Esc 退出影院预览',
     theaterLoading: '正在生成裁剪区域预览…',
     cinemaRatios: '经典电影画幅',
@@ -153,7 +153,7 @@ const dictionaries = {
     after: 'After',
     saved: 'saved',
     cropHelp: 'Drag to move. Drag a corner or pinch with two fingers to resize.',
-    previewHelp: 'Double-click the image for theater preview',
+    previewHelp: 'Double-click or double-tap for theater preview',
     theaterHelp: 'Double-click the image or press Esc to exit',
     theaterLoading: 'Preparing the cropped-area preview…',
     cinemaRatios: 'Classic cinema ratios',
@@ -848,6 +848,7 @@ export default function ImageStudio() {
                 {selected && previewView === 'source' && (
                   <TouchCrop
                     disabled={processing || packing}
+                    onDoubleTap={() => void openTheater()}
                     crop={currentCrop}
                     aspect={activeAspect}
                     minWidth={24}
