@@ -175,7 +175,14 @@ for (const touch of [false, true]) {
       await page.getByRole('button', { name: 'Linen', exact: true }).click();
       await expect(selection).toBeVisible();
       await expect(selection).toHaveAttribute('style', cropBeforeFrame!);
+      const framePreview = page.locator('.frame-live-preview');
+      await expect(framePreview).toBeVisible();
+      await expect(framePreview).toHaveClass(/all/);
+      await expect(framePreview.locator('.frame-top')).toHaveCSS('background-color', 'rgb(214, 201, 180)');
+      await expect(framePreview.locator('.frame-top')).toHaveCSS('border-radius', '0px');
       await page.getByRole('button', { name: 'Top & bottom', exact: true }).click();
+      await expect(framePreview).toHaveClass(/bars/);
+      await expect(framePreview.locator('.frame-left')).toHaveCSS('display', 'none');
       await page.getByLabel('Border width', { exact: true }).fill('40');
       await page.getByLabel('RGB R', { exact: true }).fill('80');
       await expect(selection).toBeVisible();

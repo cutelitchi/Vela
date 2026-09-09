@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import {
   centerCrop,
   makeAspectCrop,
@@ -723,6 +723,18 @@ export default function ImageStudio() {
   const estimatedSavings = selected && previewResultSize
     ? Math.round((1 - previewResultSize / selected.file.size) * 100)
     : undefined;
+  const cropContentWidth = resizeMode === 'pixels'
+    ? targetWidth
+    : selected && currentCrop
+      ? selected.width * currentCrop.width / 100 * scalePercent / 100
+      : targetWidth;
+  const framePreviewSize = cropContentWidth > 0
+    ? Math.min(60, frameWidth / cropContentWidth * 100)
+    : 0;
+  const framePreviewStyle = {
+    '--frame-preview-size': `${framePreviewSize}%`,
+    '--frame-preview-color': frameColor,
+  } as CSSProperties;
 
   return (
     <main className={`app-shell ${items.length ? 'has-workspace' : ''}`}>
@@ -824,6 +836,14 @@ export default function ImageStudio() {
                     aspect={activeAspect}
                     minWidth={24}
                     onChange={(_, percentCrop) => setCrops((current) => ({ ...current, [selected.id]: percentCrop }))}
+                    renderSelectionAddon={() => frameEnabled && frameWidth > 0 ? (
+                      <div className={`frame-live-preview ${frameStyle}`} style={framePreviewStyle} aria-hidden="true">
+                        <i className="frame-edge frame-top" />
+                        <i className="frame-edge frame-right" />
+                        <i className="frame-edge frame-bottom" />
+                        <i className="frame-edge frame-left" />
+                      </div>
+                    ) : null}
                     keepSelection
                     style={{ touchAction: 'none' }}
                   >
@@ -836,7 +856,7 @@ export default function ImageStudio() {
                   </TouchCrop>
                 )}
                 {selected && previewResultUrl && previewView === 'result' && (
-                  <img className="result-preview" src={previewResultUrl} alt={`${selected.file.name} ${t.result}`} />
+                  <img className={`result-preview ${frameEnabled ? 'framed-preview' : ''}`} src={previewResultUrl} alt={`${selected.file.name} ${t.result}`} />
                 )}
                 <span className="preview-hint">↗ {t.previewHelp}</span>
               </div>
@@ -1032,7 +1052,7 @@ export default function ImageStudio() {
           <button className="theater-close" aria-label={t.theaterHelp} onClick={closeTheater}>×</button>
           <div className="theater-frame">
             {theaterPreviewUrl && (
-              <img src={theaterPreviewUrl} alt={selected.file.name} draggable={false} />
+              <img className={frameEnabled ? 'framed-preview' : ''} src={theaterPreviewUrl} alt={selected.file.name} draggable={false} />
             )}
             {theaterLoading && <div className="theater-loading"><i /><span>{t.theaterLoading}</span></div>}
             <p>{t.theaterHelp}</p>

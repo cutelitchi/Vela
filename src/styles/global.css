@@ -102,8 +102,20 @@ svg { width: 1.15rem; height: 1.15rem; fill: none; stroke: currentColor; stroke-
 .crop-stage .ReactCrop__child-wrapper > img,
 .crop-stage .ReactCrop__crop-selection { touch-action: none !important; user-select: none; -webkit-user-select: none; }
 .crop-stage .ReactCrop__crop-selection { pointer-events: auto; }
+.crop-stage .ReactCrop__selection-addon { pointer-events: none; }
+.frame-live-preview { position: absolute; inset: 0; pointer-events: none; }
+.frame-edge { position: absolute; display: block; background: var(--frame-preview-color); border-radius: 0; }
+.frame-top, .frame-bottom { left: calc(-1 * var(--frame-preview-size)); right: calc(-1 * var(--frame-preview-size)); height: var(--frame-preview-size); }
+.frame-top { top: calc(-1 * var(--frame-preview-size)); }
+.frame-bottom { bottom: calc(-1 * var(--frame-preview-size)); }
+.frame-left, .frame-right { top: 0; bottom: 0; width: var(--frame-preview-size); }
+.frame-left { left: calc(-1 * var(--frame-preview-size)); }
+.frame-right { right: calc(-1 * var(--frame-preview-size)); }
+.frame-live-preview.bars .frame-left, .frame-live-preview.bars .frame-right { display: none; }
+.frame-live-preview.bars .frame-top, .frame-live-preview.bars .frame-bottom { left: 0; right: 0; }
 .crop-stage img { display: block; max-width: 100%; max-height: clamp(330px, calc(100vh - 375px), 680px); object-fit: contain; -webkit-user-drag: none; }
 .crop-stage .result-preview { box-shadow: 0 24px 65px rgba(17,29,47,.24); }
+.framed-preview { border-radius: 0 !important; }
 .preview-hint { position: absolute; right: 14px; bottom: 12px; padding: 6px 9px; border-radius: 7px; color: #eaf2fb; background: rgba(9,17,31,.76); backdrop-filter: blur(8px); font-size: .64rem; letter-spacing: .02em; pointer-events: none; }
 .ReactCrop__crop-selection { border: 2px solid var(--cyan); box-shadow: 0 0 0 9999em rgba(9,17,31,.58); }
 .ReactCrop__drag-handle { width: 12px; height: 12px; background: var(--cyan); border: 2px solid var(--ink); }
