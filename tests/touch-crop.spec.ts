@@ -1,4 +1,5 @@
 import { Buffer } from 'node:buffer';
+import { readFile } from 'node:fs/promises';
 import { test, expect, type Page, type CDPSession } from '@playwright/test';
 
 type Point = { x: number; y: number; id?: number };
@@ -100,4 +101,47 @@ test('desktop mouse corner resizing and double-click preview still work', async 
   expect((await selection.boundingBox())!.width).toBeLessThan(before.width - 25);
   await page.locator('.crop-stage').dblclick();
   await expect(page.getByRole('dialog')).toBeVisible();
+});
+
+test('frames export exact RGB borders, preserve content and include the final dimensions', async ({ page }) => {
+  await loadFixture(page);
+  const photos = page.locator('.photo-presets');
+  await expect(photos).not.toHaveAttribute('open');
+  await photos.locator('summary').click();
+  await expect(photos.getByRole('button', { name: 'Passport', exact: false })).toBeVisible();
+  await photos.locator('summary').click();
+  await expect(page.locator('.frame-swatches button')).toHaveCount(8);
+  await expect(page.getByRole('switch', { name: 'Photo frame', exact: true })).toHaveAttribute('aria-checked', 'false');
+  await page.getByRole('button', { name: 'PNG', exact: true }).click();
+  await page.getByRole('spinbutton', { name: 'Width px', exact: true }).fill('100');
+  await page.getByLabel('Border width', { exact: true }).fill('20');
+  for (const [channel, value] of [['R', '0'], ['G', '64'], ['B', '128']]) {
+    await page.getByLabel(`RGB ${channel}`, { exact: true }).fill(value);
+  }
+  for (const [style, width] of [['All sides', 140], ['Top & bottom', 100]] as const) {
+    await page.getByRole('button', { name: style, exact: true }).click();
+    await page.getByRole('button', { name: 'Process images', exact: false }).click();
+    const downloadEvent = page.waitForEvent('download');
+    await page.getByRole('button', { name: 'Ready — click to download', exact: true }).click();
+    const download = await downloadEvent;
+    const bytes = await readFile((await download.path())!);
+    expect(bytes.readUInt32BE(16)).toBe(width);
+    expect(bytes.readUInt32BE(20)).toBe(115);
+    const pixels = await page.evaluate(async (base64) => {
+      const image = new Image();
+      image.src = `data:image/png;base64,${base64}`;
+      await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = image.width; canvas.height = image.height;
+      const context = canvas.getContext('2d')!;
+      context.drawImage(image, 0, 0);
+      const sample = (x: number, y: number) => Array.from(context.getImageData(x, y, 1, 1).data);
+      return { corner: sample(0, 0), center: sample(image.width / 2, image.height / 2), left: sample(0, 40) };
+    }, bytes.toString('base64'));
+    expect(pixels.corner).toEqual([0, 64, 128, 255]);
+    expect(pixels.center).toEqual([24, 215, 208, 255]);
+    expect(pixels.left).toEqual(style === 'All sides' ? [0, 64, 128, 255] : [24, 215, 208, 255]);
+  }
+  await page.getByRole('switch', { name: 'Photo frame', exact: true }).click();
+  await expect(page.getByRole('button', { name: 'Process images', exact: false })).toBeVisible();
 });

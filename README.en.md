@@ -37,6 +37,7 @@ Website: [picsizekit.com](https://picsizekit.com)
 | Touch cropping | Drag to move, resize with 44px corner targets or pinch with two fingers; selection stays within the image |
 | Theater preview | Double-click the crop area to preview exactly what is inside the selection; double-click again or press Esc to exit |
 | Format conversion | Export JPEG, PNG or WebP |
+| Photo frames | 8 muted colors, top/bottom or all sides, 0–512px borders and custom RGB; borders extend the canvas and appear in previews and downloads |
 | Quality control | Quality slider for JPEG and WebP; lossless PNG output |
 | Live size comparison | See estimated output dimensions, file size and savings while changing size, format or quality |
 | Process and download | Progress appears on the main button, which becomes an animated download prompt when ready; individual files or batch ZIP |

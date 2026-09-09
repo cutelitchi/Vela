@@ -59,6 +59,12 @@ const dictionaries = {
     lock: '锁定比例',
     format: '输出格式',
     quality: '压缩质量',
+    frame: '相框',
+    frameTopBottom: '仅上下',
+    frameAll: '四周全包',
+    frameWidth: '边框宽度',
+    frameColor: '相框颜色',
+    frameHint: '边框加在图片外侧，不遮挡内容；最终尺寸会相应增加。',
     liveComparison: '实时对比',
     estimated: '预计输出',
     estimating: '计算中…',
@@ -122,6 +128,12 @@ const dictionaries = {
     lock: 'Lock ratio',
     format: 'Output format',
     quality: 'Compression quality',
+    frame: 'Photo frame',
+    frameTopBottom: 'Top & bottom',
+    frameAll: 'All sides',
+    frameWidth: 'Border width',
+    frameColor: 'Frame color',
+    frameHint: 'Added outside the image without covering it. Final dimensions include the border.',
     liveComparison: 'Live comparison',
     estimated: 'Estimated output',
     estimating: 'Calculating…',
@@ -193,6 +205,17 @@ const cinemaRatioPresets = [
 const ratioPresets = [...standardRatioPresets, ...cinemaRatioPresets, ...chinaPhotoPresets] as const;
 
 const picaInstance = pica({ features: ['js', 'wasm', 'ww'] });
+
+const frameColors = [
+  { hex: '#F2EEE6', zh: '暖白', en: 'Ivory' },
+  { hex: '#D6C9B4', zh: '亚麻', en: 'Linen' },
+  { hex: '#A49A8C', zh: '暖灰', en: 'Warm gray' },
+  { hex: '#66717B', zh: '石板灰', en: 'Slate' },
+  { hex: '#293241', zh: '深海蓝', en: 'Navy' },
+  { hex: '#48594D', zh: '松绿', en: 'Pine' },
+  { hex: '#654C43', zh: '胡桃棕', en: 'Walnut' },
+  { hex: '#262626', zh: '炭黑', en: 'Charcoal' },
+] as const;
 
 function uid() {
   return `${Date.now()}-${Math.random().toString(36).slice(2)}`;
@@ -301,6 +324,10 @@ export default function ImageStudio() {
   const [locked, setLocked] = useState(true);
   const [format, setFormat] = useState<OutputFormat>('webp');
   const [quality, setQuality] = useState(82);
+  const [frameEnabled, setFrameEnabled] = useState(false);
+  const [frameStyle, setFrameStyle] = useState<'bars' | 'all'>('all');
+  const [frameWidth, setFrameWidth] = useState(32);
+  const [frameColor, setFrameColor] = useState('#F2EEE6');
   const [stripMetadata, setStripMetadata] = useState(true);
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -339,6 +366,10 @@ export default function ImageStudio() {
   useEffect(() => {
     setPreviewView('source');
   }, [selectedId]);
+
+  useEffect(() => {
+    if (selected && frameEnabled) setPreviewView('result');
+  }, [frameEnabled, frameStyle, frameWidth, frameColor, selectedId]);
 
   useEffect(() => {
     if (!theaterMode) return;
@@ -401,7 +432,7 @@ export default function ImageStudio() {
       }
     }, 260);
     return () => { window.clearTimeout(timer); estimateJobRef.current += 1; };
-  }, [selectedId, cropSignature, resizeMode, targetWidth, targetHeight, scalePercent, format, quality, stripMetadata, ratioKey, activeAspect]);
+  }, [selectedId, cropSignature, resizeMode, targetWidth, targetHeight, scalePercent, format, quality, stripMetadata, ratioKey, activeAspect, frameEnabled, frameStyle, frameWidth, frameColor]);
 
   useEffect(() => () => {
     if (estimateUrlRef.current) URL.revokeObjectURL(estimateUrlRef.current);
@@ -441,7 +472,7 @@ export default function ImageStudio() {
     setTheaterLoading(true);
     setTheaterMode(true);
     try {
-      const blob = await createTheaterPreview(item);
+      const blob = frameEnabled ? (await processItem(item)).outputBlob : await createTheaterPreview(item);
       if (jobId !== theaterJobRef.current) return;
       const url = URL.createObjectURL(blob);
       theaterUrlRef.current = url;
@@ -568,13 +599,30 @@ export default function ImageStudio() {
       unsharpThreshold: 2,
     });
     onProgress?.(0.8);
+    let finalCanvas = outputCanvas;
+    if (frameEnabled && frameWidth > 0) {
+      const insetX = frameStyle === 'all' ? frameWidth : 0;
+      finalCanvas = document.createElement('canvas');
+      finalCanvas.width = outputWidth + insetX * 2;
+      finalCanvas.height = outputHeight + frameWidth * 2;
+      const frameContext = finalCanvas.getContext('2d');
+      if (!frameContext) throw new Error('Canvas unavailable');
+      frameContext.fillStyle = frameColor;
+      frameContext.fillRect(0, 0, finalCanvas.width, frameWidth);
+      frameContext.fillRect(0, finalCanvas.height - frameWidth, finalCanvas.width, frameWidth);
+      if (insetX) {
+        frameContext.fillRect(0, frameWidth, insetX, outputHeight);
+        frameContext.fillRect(finalCanvas.width - insetX, frameWidth, insetX, outputHeight);
+      }
+      frameContext.drawImage(outputCanvas, insetX, frameWidth);
+    }
     const mime = `image/${format}`;
-    let outputBlob = await picaInstance.toBlob(outputCanvas, mime, format === 'png' ? undefined : quality / 100);
+    let outputBlob = await picaInstance.toBlob(finalCanvas, mime, format === 'png' ? undefined : quality / 100);
     if (!stripMetadata && item.file.type === 'image/jpeg' && format === 'jpeg') {
       outputBlob = await preserveJpegMetadata(item.file, outputBlob);
     }
     onProgress?.(1);
-    return { outputBlob, outputWidth, outputHeight };
+    return { outputBlob, outputWidth: finalCanvas.width, outputHeight: finalCanvas.height };
   }
 
   async function processAll() {
@@ -668,7 +716,7 @@ export default function ImageStudio() {
     closeTheater();
   }
 
-  const settingsSignature = JSON.stringify([items.map((item) => item.id), crops, ratioKey, customRatio, resizeMode, targetWidth, targetHeight, scalePercent, format, quality, stripMetadata]);
+  const settingsSignature = JSON.stringify([items.map((item) => item.id), crops, ratioKey, customRatio, resizeMode, targetWidth, targetHeight, scalePercent, format, quality, stripMetadata, frameEnabled, frameStyle, frameWidth, frameColor]);
   const downloadReady = processedSignature === settingsSignature && items.some((item) => item.outputBlob);
   const completedCount = items.filter((item) => item.outputBlob).length;
   const selectedEstimate = liveEstimate?.itemId === selected?.id ? liveEstimate : undefined;
@@ -808,7 +856,7 @@ export default function ImageStudio() {
             <fieldset className="settings-panel panel" disabled={processing || packing} aria-label={t.settings}>
               <div className="panel-heading">
                 <strong>{t.settings}</strong>
-                <span className="step-count">01—04</span>
+                <span className="step-count">01—05</span>
               </div>
 
               <div className="control-section crop-control">
@@ -837,7 +885,8 @@ export default function ImageStudio() {
                     </button>
                   ))}
                 </div>
-                <div className="photo-preset-heading"><span>{t.photoRatios}</span><i /></div>
+                <details className="photo-presets">
+                <summary>{t.photoRatios}{ratioKey.startsWith('cn-') && <span> · {language === 'zh' ? chinaPhotoPresets.find((preset) => preset.key === ratioKey)?.labelZh : chinaPhotoPresets.find((preset) => preset.key === ratioKey)?.labelEn}</span>}</summary>
                 <div className="photo-ratio-grid">
                   {chinaPhotoPresets.map((preset) => (
                     <button
@@ -851,6 +900,7 @@ export default function ImageStudio() {
                   ))}
                 </div>
                 <p className="hint">{t.photoRatioHint}</p>
+                </details>
                 {ratioKey === 'custom' && (
                   <div className="custom-ratio">
                     <input aria-label={`${t.customRatio} ${t.width}`} type="number" min="1" value={customRatio.width} onChange={(event) => updateCustomRatio('width', Number(event.target.value))} />
@@ -915,8 +965,35 @@ export default function ImageStudio() {
                 ) : <p className="comparison-placeholder">{t.comparisonHint}</p>}
               </div>
 
+              <div className="control-section frame-control">
+                <label className="control-label"><b>04</b>{t.frame}</label>
+                <button role="switch" aria-label={t.frame} aria-checked={frameEnabled} className={`switch ${frameEnabled ? 'active' : ''}`} onClick={() => setFrameEnabled((value) => !value)}><span /></button>
+                <div className="frame-options">
+                  <div className="segmented">
+                    <button aria-pressed={frameStyle === 'bars'} className={frameStyle === 'bars' ? 'active' : ''} onClick={() => { setFrameStyle('bars'); setFrameEnabled(true); }}>{t.frameTopBottom}</button>
+                    <button aria-pressed={frameStyle === 'all'} className={frameStyle === 'all' ? 'active' : ''} onClick={() => { setFrameStyle('all'); setFrameEnabled(true); }}>{t.frameAll}</button>
+                  </div>
+                  <div className="frame-swatches" aria-label={t.frameColor}>
+                    {frameColors.map((color) => <button key={color.hex} style={{ backgroundColor: color.hex }} className={frameColor.toUpperCase() === color.hex ? 'active' : ''} aria-label={language === 'zh' ? color.zh : color.en} title={language === 'zh' ? color.zh : color.en} aria-pressed={frameColor.toUpperCase() === color.hex} onClick={() => { setFrameColor(color.hex); setFrameEnabled(true); }} />)}
+                  </div>
+                  <div className="frame-width-field">
+                    <label htmlFor="frame-width">{t.frameWidth}</label>
+                    <span><input id="frame-width" type="number" min="0" max="512" value={frameWidth} onChange={(event) => { setFrameWidth(Math.min(512, Math.max(0, Math.round(Number(event.target.value) || 0)))); setFrameEnabled(true); }} /> px</span>
+                  </div>
+                  <div className="rgb-fields">
+                    <input type="color" aria-label={t.frameColor} value={frameColor} onChange={(event) => { setFrameColor(event.target.value); setFrameEnabled(true); }} />
+                    {['R', 'G', 'B'].map((channel, index) => <label key={channel}>{channel}<input aria-label={`RGB ${channel}`} type="number" min="0" max="255" value={parseInt(frameColor.slice(1 + index * 2, 3 + index * 2), 16)} onChange={(event) => {
+                      const value = Math.min(255, Math.max(0, Math.round(Number(event.target.value) || 0))).toString(16).padStart(2, '0');
+                      setFrameColor((current) => current.slice(0, 1 + index * 2) + value + current.slice(3 + index * 2));
+                      setFrameEnabled(true);
+                    }} /></label>)}
+                  </div>
+                  <p className="hint">{t.frameHint}</p>
+                </div>
+              </div>
+
               <div className="control-section metadata-control">
-                <label className="control-label"><b>04</b>{t.metadata}</label>
+                <label className="control-label"><b>05</b>{t.metadata}</label>
                 <button
                   role="switch"
                   aria-label={t.metadata}
