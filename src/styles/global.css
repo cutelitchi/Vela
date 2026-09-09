@@ -128,10 +128,11 @@ svg { width: 1.15rem; height: 1.15rem; fill: none; stroke: currentColor; stroke-
 .frame-swatches { display: grid; grid-template-columns: repeat(8, 1fr); gap: 7px; margin: 12px 2px; }
 .frame-swatches button { height: 25px; border-radius: 50%; border: 1px solid rgba(0,0,0,.15); }
 .frame-swatches button.active { outline: 2px solid var(--cyan-dark); outline-offset: 2px; }
-.frame-width-field { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: .7rem; color: var(--muted); }
+.frame-width-field { display: grid; grid-template-columns: auto minmax(70px, 1fr) auto; align-items: center; gap: 10px; font-size: .7rem; color: var(--muted); }
 .frame-width-field span { display: flex; align-items: center; gap: 5px; }
-.frame-width-field input { width: 65px; }
-.frame-width-field input, .rgb-fields input[type=number] { padding: 7px; border: 1px solid var(--line); border-radius: 6px; color: var(--text); background: white; font-size: .75rem; }
+.frame-width-field input[type=number] { width: 65px; }
+.frame-width-field input[type=number], .rgb-fields input[type=number] { padding: 7px; border: 1px solid var(--line); border-radius: 6px; color: var(--text); background: white; font-size: .75rem; }
+.frame-width-slider { width: 100%; min-width: 0; margin: 0; }
 .rgb-fields { display: grid; grid-template-columns: 30px repeat(3, 1fr); gap: 7px; align-items: end; margin-top: 9px; }
 .rgb-fields label { display: flex; flex-direction: column; gap: 3px; color: var(--muted); font-size: .6rem; }
 .rgb-fields input[type=number] { min-width: 0; width: 100%; }

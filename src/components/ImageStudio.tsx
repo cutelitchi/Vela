@@ -63,6 +63,7 @@ const dictionaries = {
     frameTopBottom: '仅上下',
     frameAll: '四周全包',
     frameWidth: '边框宽度',
+    frameWidthSlider: '滑动调节边框宽度',
     frameColor: '相框颜色',
     frameHint: '边框加在图片外侧，不遮挡内容；最终尺寸会相应增加。',
     liveComparison: '实时对比',
@@ -132,6 +133,7 @@ const dictionaries = {
     frameTopBottom: 'Top & bottom',
     frameAll: 'All sides',
     frameWidth: 'Border width',
+    frameWidthSlider: 'Adjust border width',
     frameColor: 'Frame color',
     frameHint: 'Added outside the image without covering it. Final dimensions include the border.',
     liveComparison: 'Live comparison',
@@ -556,6 +558,11 @@ export default function ImageStudio() {
     const nextHeight = clampDimension(value);
     setTargetHeight(nextHeight);
     if (locked) setTargetWidth(clampDimension(nextHeight * activeAspect));
+  }
+
+  function updateFrameWidth(value: number) {
+    setFrameWidth(Math.min(512, Math.max(0, Math.round(value || 0))));
+    setFrameEnabled(true);
   }
 
   async function processItem(item: ImageItem, onProgress?: (fraction: number) => void) {
@@ -994,7 +1001,8 @@ export default function ImageStudio() {
                   </div>
                   <div className="frame-width-field">
                     <label htmlFor="frame-width">{t.frameWidth}</label>
-                    <span><input id="frame-width" type="number" min="0" max="512" value={frameWidth} onChange={(event) => { setFrameWidth(Math.min(512, Math.max(0, Math.round(Number(event.target.value) || 0)))); setFrameEnabled(true); }} /> px</span>
+                    <input className="frame-width-slider" aria-label={t.frameWidthSlider} type="range" min="0" max="512" step="1" value={frameWidth} onInput={(event) => updateFrameWidth(Number(event.currentTarget.value))} />
+                    <span><input id="frame-width" type="number" min="0" max="512" value={frameWidth} onChange={(event) => updateFrameWidth(Number(event.target.value))} /> px</span>
                   </div>
                   <div className="rgb-fields">
                     <input type="color" aria-label={t.frameColor} value={frameColor} onChange={(event) => { setFrameColor(event.target.value); setFrameEnabled(true); }} />

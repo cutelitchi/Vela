@@ -114,7 +114,11 @@ test('frames export exact RGB borders, preserve content and include the final di
   await expect(page.getByRole('switch', { name: 'Photo frame', exact: true })).toHaveAttribute('aria-checked', 'false');
   await page.getByRole('button', { name: 'PNG', exact: true }).click();
   await page.getByRole('spinbutton', { name: 'Width px', exact: true }).fill('100');
+  const frameSlider = page.getByRole('slider', { name: 'Adjust border width', exact: true });
+  await frameSlider.fill('48');
+  await expect(page.getByLabel('Border width', { exact: true })).toHaveValue('48');
   await page.getByLabel('Border width', { exact: true }).fill('20');
+  await expect(frameSlider).toHaveValue('20');
   for (const [channel, value] of [['R', '0'], ['G', '64'], ['B', '128']]) {
     await page.getByLabel(`RGB ${channel}`, { exact: true }).fill(value);
   }
