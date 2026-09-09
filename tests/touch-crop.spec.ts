@@ -145,3 +145,53 @@ test('frames export exact RGB borders, preserve content and include the final di
   await page.getByRole('switch', { name: 'Photo frame', exact: true }).click();
   await expect(page.getByRole('button', { name: 'Process images', exact: false })).toBeVisible();
 });
+
+for (const touch of [false, true]) {
+  test.describe(touch ? 'Framing with touch' : 'Framing with mouse', () => {
+    test.use({ viewport: touch ? { width: 390, height: 844 } : { width: 1280, height: 900 }, isMobile: touch, hasTouch: touch });
+    test('changing a frame keeps the crop editable and preserves explicit preview selection', async ({ page, context }) => {
+      await loadFixture(page);
+      const selection = page.locator('.ReactCrop__crop-selection');
+      const cdp = touch ? await context.newCDPSession(page) : undefined;
+      const drag = async (from: Point, to: Point) => {
+        if (cdp) await gesture(cdp, [from], [to]);
+        else {
+          await page.mouse.move(from.x, from.y);
+          await page.mouse.down();
+          await page.mouse.move(to.x, to.y, { steps: 8 });
+          await page.mouse.up();
+        }
+      };
+      const resize = async () => {
+        await selection.scrollIntoViewIfNeeded();
+        const box = (await selection.boundingBox())!;
+        const handle = (await page.locator('.ord-se').boundingBox())!;
+        const start = { x: handle.x + handle.width / 2, y: handle.y + handle.height / 2 };
+        await drag(start, { x: start.x - 32, y: start.y - 24 });
+        await expect.poll(async () => (await selection.boundingBox())!.width).toBeLessThan(box.width - 20);
+      };
+      await resize();
+      const cropBeforeFrame = await selection.getAttribute('style');
+      await page.getByRole('button', { name: 'Linen', exact: true }).click();
+      await expect(selection).toBeVisible();
+      await expect(selection).toHaveAttribute('style', cropBeforeFrame!);
+      await page.getByRole('button', { name: 'Top & bottom', exact: true }).click();
+      await page.getByLabel('Border width', { exact: true }).fill('40');
+      await page.getByLabel('RGB R', { exact: true }).fill('80');
+      await expect(selection).toBeVisible();
+      await selection.scrollIntoViewIfNeeded();
+      const beforeMove = (await selection.boundingBox())!;
+      const center = { x: beforeMove.x + beforeMove.width / 2, y: beforeMove.y + beforeMove.height / 2 };
+      await drag(center, { x: center.x + 15, y: center.y + 10 });
+      await expect.poll(async () => (await selection.boundingBox())!.x).toBeGreaterThan(beforeMove.x + 8);
+      await resize();
+      const editedCrop = await selection.getAttribute('style');
+      await page.getByRole('button', { name: 'Result', exact: true }).click();
+      await expect(page.locator('.result-preview')).toBeVisible();
+      await page.getByLabel('Border width', { exact: true }).fill('20');
+      await expect(page.locator('.result-preview')).toBeVisible();
+      await page.locator('.preview-tabs').getByRole('button', { name: 'Original', exact: true }).click();
+      await expect(selection).toHaveAttribute('style', editedCrop!);
+    });
+  });
+}

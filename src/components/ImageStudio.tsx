@@ -368,10 +368,6 @@ export default function ImageStudio() {
   }, [selectedId]);
 
   useEffect(() => {
-    if (selected && frameEnabled) setPreviewView('result');
-  }, [frameEnabled, frameStyle, frameWidth, frameColor, selectedId]);
-
-  useEffect(() => {
     if (!theaterMode) return;
     const closeOnEscape = (event: KeyboardEvent) => {
       if (event.key === 'Escape') closeTheater();
