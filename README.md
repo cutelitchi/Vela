@@ -44,7 +44,8 @@ PicSizeKit 是一个隐私优先的在线图片处理工具。图片解码、裁
 | 上传前配置 | 无需选择图片即可查看并调整全部设置，导入后保留预设参数 |
 | 紧凑工作区 | 左右分栏、无独立图片队列；批量图片通过下拉菜单切换预览 |
 | EXIF 隐私 | 默认删除位置、设备型号和拍摄时间等元数据；JPEG → JPEG 可选择保留 |
-| 中英文界面 | 页面顶部一键切换，并保存本机语言偏好 |
+| 中英文界面 | 独立中英文网址，顶部语言链接切换时保留当前编辑状态 |
+| 搜索友好页面 | 本地化标题、描述、规范网址、hreflang、静态使用指南及自动生成的网站地图 |
 
 ## 隐私设计
 
@@ -61,7 +62,20 @@ Blob / ZIP 本地下载
 - 图片内容不会发送至 PicSizeKit、Cloudflare 或其他服务器。
 - 不需要注册账户。
 - 处理结果使用临时 Blob URL，页面关闭后自动失效。
-- 语言偏好只保存在浏览器的 `localStorage` 中。
+- 页面语言由网址决定，无需保存本机语言偏好。
+
+## 图片工具与搜索收录
+
+| 工具 | English | 中文 |
+| --- | --- | --- |
+| 缩放、裁剪与转换 | [Open](https://picsizekit.com/) | [打开](https://picsizekit.com/zh/) |
+| 图片压缩 | [Open](https://picsizekit.com/compress-image/) | [打开](https://picsizekit.com/zh/compress-image/) |
+| WebP 转 JPG | [Open](https://picsizekit.com/webp-to-jpg/) | [打开](https://picsizekit.com/zh/webp-to-jpg/) |
+| 照片加边框 | [Open](https://picsizekit.com/add-border-to-photo/) | [打开](https://picsizekit.com/zh/add-border-to-photo/) |
+
+每个入口预选对应处理参数，并在初始 HTML 中包含独立的使用指南和常见问题。切换语言保留当前图片及设置，切换到其他工具则进入对应的预设工作区。刷新或关闭页面会结束本地编辑会话。
+
+部署后需在 Google Search Console 验证域名，提交 `https://picsizekit.com/sitemap.xml`，并使用网址检查工具确认收录。这些账户侧操作与代码部署分开进行；网站地图和 ads.txt 都不保证收录或排名。页面文案和路由统一维护在 `src/data/seo.ts`。
 
 ## 技术栈
 

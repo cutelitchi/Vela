@@ -9,8 +9,8 @@ import pica from 'pica';
 import { zipSync } from 'fflate';
 import piexif from 'piexifjs';
 import 'react-image-crop/dist/ReactCrop.css';
+import { content, pagePath, type Language, type Tool } from '../data/seo';
 
-type Language = 'zh' | 'en';
 type OutputFormat = 'jpeg' | 'png' | 'webp';
 type ResizeMode = 'pixels' | 'percent';
 
@@ -38,8 +38,6 @@ type LiveEstimate = {
 const dictionaries = {
   zh: {
     brandNote: '本地影像工具',
-    headline: '精准调整每一张图片。',
-    intro: '裁剪、缩放、转换与压缩都在你的设备上完成。',
     privacy: '图片仅在您的浏览器中处理，不会上传到服务器。',
     choose: '拖拽图片到这里，或点击选择',
     chooseNote: '支持 JPEG、PNG、WebP，可一次选择多张',
@@ -108,8 +106,6 @@ const dictionaries = {
   },
   en: {
     brandNote: 'Local image tools',
-    headline: 'Resize every image with precision.',
-    intro: 'Crop, resize, convert and compress directly on your device.',
     privacy: 'Your images are processed only in your browser and never uploaded.',
     choose: 'Drop images here, or click to choose',
     chooseNote: 'JPEG, PNG and WebP supported — select multiple files',
@@ -312,21 +308,21 @@ function IconDownload() {
   );
 }
 
-export default function ImageStudio() {
-  const [language, setLanguage] = useState<Language>('en');
+export default function ImageStudio({ language = 'en', tool = 'home' }: { language?: Language; tool?: Tool }) {
+  const pageCopy = content[language][tool];
   const [items, setItems] = useState<ImageItem[]>([]);
   const [selectedId, setSelectedId] = useState<string>('');
   const [crops, setCrops] = useState<Record<string, PercentCrop>>({});
   const [ratioKey, setRatioKey] = useState('original');
   const [customRatio, setCustomRatio] = useState({ width: 5, height: 4 });
-  const [resizeMode, setResizeMode] = useState<ResizeMode>('pixels');
+  const [resizeMode, setResizeMode] = useState<ResizeMode>(tool === 'home' ? 'pixels' : 'percent');
   const [targetWidth, setTargetWidth] = useState(1920);
   const [targetHeight, setTargetHeight] = useState(1080);
   const [scalePercent, setScalePercent] = useState(100);
   const [locked, setLocked] = useState(true);
-  const [format, setFormat] = useState<OutputFormat>('webp');
+  const [format, setFormat] = useState<OutputFormat>(tool === 'webp-to-jpg' ? 'jpeg' : 'webp');
   const [quality, setQuality] = useState(82);
-  const [frameEnabled, setFrameEnabled] = useState(false);
+  const [frameEnabled, setFrameEnabled] = useState(tool === 'add-border-to-photo');
   const [frameStyle, setFrameStyle] = useState<'bars' | 'all'>('all');
   const [frameWidth, setFrameWidth] = useState(32);
   const [frameColor, setFrameColor] = useState('#F2EEE6');
@@ -351,19 +347,6 @@ export default function ImageStudio() {
   const theaterJobRef = useRef(0);
   const selected = items.find((item) => item.id === selectedId) ?? items[0];
   const t = dictionaries[language];
-
-  useEffect(() => {
-    const saved = window.localStorage.getItem('picsizekit-language-v2');
-    if (saved === 'en' || saved === 'zh') setLanguage(saved);
-  }, []);
-
-  useEffect(() => {
-    window.localStorage.setItem('picsizekit-language-v2', language);
-    document.documentElement.lang = language === 'zh' ? 'zh-CN' : 'en';
-    document.title = language === 'zh'
-      ? 'PicSizeKit — 隐私优先的图片裁剪、缩放与压缩工具'
-      : 'PicSizeKit — Private image resize, crop & compress';
-  }, [language]);
 
   useEffect(() => {
     setPreviewView('source');
@@ -391,8 +374,14 @@ export default function ImageStudio() {
     return ratioPresets.find((preset) => preset.key === ratioKey)?.value || 1;
   }, [selected, ratioKey, customRatio, targetWidth, targetHeight]);
 
+  function defaultCrop(item: ImageItem): PercentCrop {
+    // Conversion, compression and framing should start with the entire image.
+    if (tool !== 'home' && ratioKey === 'original') return { unit: '%', x: 0, y: 0, width: 100, height: 100 };
+    return centeredCrop(item.width, item.height, ratioKey === 'original' ? item.width / item.height : activeAspect);
+  }
+
   const currentCrop = selected
-    ? crops[selected.id] ?? centeredCrop(selected.width, selected.height, activeAspect)
+    ? crops[selected.id] ?? defaultCrop(selected)
     : undefined;
 
   const cropSignature = currentCrop
@@ -439,11 +428,7 @@ export default function ImageStudio() {
 
   async function createTheaterPreview(item: ImageItem) {
     const image = await loadImage(item.sourceUrl);
-    const crop = crops[item.id] ?? centeredCrop(
-      item.width,
-      item.height,
-      ratioKey === 'original' ? item.width / item.height : activeAspect,
-    );
+    const crop = crops[item.id] ?? defaultCrop(item);
     const sx = Math.max(0, Math.round((crop.x / 100) * item.width));
     const sy = Math.max(0, Math.round((crop.y / 100) * item.height));
     const sw = Math.max(1, Math.min(item.width - sx, Math.round((crop.width / 100) * item.width)));
@@ -568,7 +553,7 @@ export default function ImageStudio() {
   async function processItem(item: ImageItem, onProgress?: (fraction: number) => void) {
     const image = await loadImage(item.sourceUrl);
     onProgress?.(0.1);
-    const crop = crops[item.id] ?? centeredCrop(item.width, item.height, ratioKey === 'original' ? item.width / item.height : activeAspect);
+    const crop = crops[item.id] ?? defaultCrop(item);
     const sx = Math.max(0, Math.round((crop.x / 100) * item.width));
     const sy = Math.max(0, Math.round((crop.y / 100) * item.height));
     const sw = Math.max(1, Math.min(item.width - sx, Math.round((crop.width / 100) * item.width)));
@@ -753,9 +738,9 @@ export default function ImageStudio() {
   } as CSSProperties;
 
   return (
-    <main className={`app-shell ${items.length ? 'has-workspace' : ''}`}>
+    <main id="top" className={`app-shell ${items.length ? 'has-workspace' : ''}`}>
       <header className="site-header">
-        <a className="brand" href="/" aria-label="PicSizeKit home">
+        <a className="brand" href={pagePath(language)} aria-label="PicSizeKit home">
           <span className="brand-mark"><span /></span>
           <span>
             <strong>PicSizeKit</strong>
@@ -765,8 +750,8 @@ export default function ImageStudio() {
         <div className="header-actions">
           <span className="local-chip"><i /> {t.localBadge}</span>
           <div className="language-toggle" aria-label="Language / 语言">
-            <button aria-pressed={language === 'zh'} className={language === 'zh' ? 'active' : ''} onClick={() => setLanguage('zh')}>中文</button>
-            <button aria-pressed={language === 'en'} className={language === 'en' ? 'active' : ''} onClick={() => setLanguage('en')}>EN</button>
+            <a href={pagePath('zh', tool)} hrefLang="zh-Hans" lang="zh-CN" aria-current={language === 'zh' ? 'page' : undefined} className={language === 'zh' ? 'active' : ''}>中文</a>
+            <a href={pagePath('en', tool)} hrefLang="en" lang="en" aria-current={language === 'en' ? 'page' : undefined} className={language === 'en' ? 'active' : ''}>EN</a>
           </div>
         </div>
       </header>
@@ -774,8 +759,8 @@ export default function ImageStudio() {
       <section className="intro-strip workspace-active">
         <div>
           <span className="section-index">01 / IMAGE LAB</span>
-          <h1>{t.headline}</h1>
-          <p>{t.intro}</p>
+          <h1>{pageCopy.headline}</h1>
+          <p>{pageCopy.intro}</p>
         </div>
         <div className="privacy-note">
           <span className="privacy-icon">✓</span>
@@ -1080,6 +1065,7 @@ export default function ImageStudio() {
 
       <footer>
         <span>PicSizeKit / 2026</span>
+        <a href="#guide">{language === 'zh' ? '使用指南与更多工具 ↓' : 'How to use & more tools ↓'}</a>
         <p>{t.footer}</p>
       </footer>
     </main>

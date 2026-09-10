@@ -1,0 +1,60 @@
+---
+import ImageStudio from '../components/ImageStudio';
+import { ClientRouter } from 'astro:transitions';
+import { content, pagePath, site, tools, type Language, type Tool } from '../data/seo';
+import '../styles/global.css';
+interface Props { language: Language; tool: Tool }
+const { language, tool } = Astro.props;
+const copy = content[language][tool];
+const canonical = site + pagePath(language, tool);
+const zh = language === 'zh';
+---
+<!doctype html>
+<html lang={zh ? 'zh-CN' : 'en'} transition:animate="none">
+  <head>
+    <meta charset="UTF-8" />
+    <ClientRouter />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#09111f" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <title>{copy.title}</title>
+    <meta name="description" content={copy.description} />
+    <link rel="canonical" href={canonical} />
+    <link rel="alternate" hreflang="en" href={site + pagePath('en', tool)} />
+    <link rel="alternate" hreflang="zh-Hans" href={site + pagePath('zh', tool)} />
+    <link rel="alternate" hreflang="x-default" href={site + pagePath('en', tool)} />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="PicSizeKit" />
+    <meta property="og:title" content={copy.title} />
+    <meta property="og:description" content={copy.description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:locale" content={zh ? 'zh_CN' : 'en_US'} />
+    <meta name="twitter:card" content="summary" />
+    <meta name="twitter:title" content={copy.title} />
+    <meta name="twitter:description" content={copy.description} />
+  </head>
+  <body>
+    <ImageStudio language={language} tool={tool} client:load transition:persist={`studio-${tool}`} />
+    <section class="tool-guide" id="guide" aria-labelledby="guide-title">
+      <div class="guide-heading">
+        <div><span class="section-index">03 / {zh ? '使用指南' : 'QUICK GUIDE'}</span><h2 id="guide-title">{copy.guideTitle}</h2></div>
+        <a href="#top">{zh ? '返回编辑器 ↑' : 'Back to editor ↑'}</a>
+      </div>
+      <ol class="guide-steps">
+        {copy.steps.map((step, index) => <li><span class="step-number">0{index + 1}</span><p>{step}</p></li>)}
+      </ol>
+      <p class="guide-tip">{copy.tip}</p>
+      <div class="guide-bottom">
+        <section aria-labelledby="faq-title">
+          <h2 id="faq-title">{zh ? '常见问题' : 'Frequently asked questions'}</h2>
+          {copy.faqs.map(([question, answer]) => <details class="guide-faq"><summary>{question}</summary><p>{answer}</p></details>)}
+        </section>
+        <nav class="related-tools" aria-labelledby="tools-title">
+          <h2 id="tools-title">{zh ? '更多图片工具' : 'Explore image tools'}</h2>
+          {tools.filter((other) => other !== tool).map((other) => <a href={pagePath(language, other)}><span>{content[language][other].label}</span><span aria-hidden="true">↗</span></a>)}
+          <p>{zh ? '所有工具免费使用，无需账户。图片在本地浏览器处理。' : 'Every tool is free, with no account required. Your images are processed in your browser.'}</p>
+        </nav>
+      </div>
+    </section>
+  </body>
+</html>

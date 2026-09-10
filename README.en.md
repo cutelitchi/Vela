@@ -44,7 +44,8 @@ Website: [picsizekit.com](https://picsizekit.com)
 | Configure before import | Explore and adjust all settings before choosing images; your preferences carry over |
 | Compact workspace | Side-by-side panels without a separate queue; switch batch previews with a compact selector |
 | EXIF privacy | Private metadata is removed by default; JPEG → JPEG preservation is optional |
-| Bilingual UI | Switch between Chinese and English from the page header with a saved local preference |
+| Bilingual UI | Dedicated English and Chinese URLs; header language links preserve the active editor when switching languages |
+| Search-friendly pages | Localized titles, descriptions, canonical URLs, hreflang, static guides and an automatically generated sitemap |
 
 ## Privacy model
 
@@ -61,7 +62,20 @@ Download a local Blob or ZIP
 - Image content is never sent to PicSizeKit, Cloudflare or another server.
 - No account is required.
 - Results use temporary Blob URLs that disappear when the page closes.
-- The language preference is the only value stored in `localStorage`.
+- The URL determines the page language; no saved language preference is required.
+
+## Image tools and search visibility
+
+| Tool | English | 中文 |
+| --- | --- | --- |
+| Resize, crop and convert | [Open](https://picsizekit.com/) | [打开](https://picsizekit.com/zh/) |
+| Image compression | [Open](https://picsizekit.com/compress-image/) | [打开](https://picsizekit.com/zh/compress-image/) |
+| WebP to JPG | [Open](https://picsizekit.com/webp-to-jpg/) | [打开](https://picsizekit.com/zh/webp-to-jpg/) |
+| Photo borders | [Open](https://picsizekit.com/add-border-to-photo/) | [打开](https://picsizekit.com/zh/add-border-to-photo/) |
+
+Each entry starts with appropriate editor settings and includes a unique guide and FAQ in the initial HTML. Language switches retain the current images and settings; switching to another tool starts that tool's preset workspace. Refreshing or closing the page discards the local session.
+
+After deployment, verify the domain in Google Search Console, submit `https://picsizekit.com/sitemap.xml`, and use URL Inspection to check indexing. These account-side steps are separate from deployment; neither a sitemap nor ads.txt guarantees indexing or ranking. Copy and route definitions live in `src/data/seo.ts`.
 
 ## Stack
 

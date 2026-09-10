@@ -1,0 +1,13 @@
+---
+import ToolPage from '../layouts/ToolPage.astro';
+import { languages, tools, pagePath } from '../data/seo';
+
+export function getStaticPaths() {
+  return languages.flatMap((language) => tools.map((tool) => ({
+    params: { path: pagePath(language, tool).slice(1, -1) },
+    props: { language, tool },
+  }))).filter(({ params }) => params.path !== '');
+}
+const { language, tool } = Astro.props;
+---
+<ToolPage language={language} tool={tool} />

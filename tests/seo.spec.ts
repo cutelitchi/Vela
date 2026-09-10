@@ -1,0 +1,79 @@
+import { Buffer } from 'node:buffer';
+import { test, expect } from '@playwright/test';
+
+test('all sitemap pages expose localized content and reciprocal language links without JavaScript', async ({ browser, request }) => {
+  const response = await request.get('/sitemap.xml');
+  expect(response.ok()).toBeTruthy();
+  const urls = [...(await response.text()).matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => match[1]);
+  expect(urls).toHaveLength(8);
+  const context = await browser.newContext({ javaScriptEnabled: false });
+  const page = await context.newPage();
+  const titles = new Set<string>();
+  for (const url of urls) {
+    const path = new URL(url).pathname;
+    const zh = path.startsWith('/zh/');
+    const result = await page.goto(`http://127.0.0.1:4322${path}`);
+    expect(result?.status()).toBe(200);
+    await expect(page.locator('html')).toHaveAttribute('lang', zh ? 'zh-CN' : 'en');
+    await expect(page.locator('h1')).toHaveCount(1);
+    await expect(page.locator('link[rel=canonical]')).toHaveAttribute('href', url);
+    await expect(page.locator('meta[name=description]')).toHaveAttribute('content', zh ? /图片|照片|WebP/ : /image|photo|WebP/);
+    const enPath = zh ? path.replace(/^\/zh\//, '/') : path;
+    await expect(page.locator('link[hreflang=en]')).toHaveAttribute('href', `https://picsizekit.com${enPath}`);
+    await expect(page.locator('link[hreflang=zh-Hans]')).toHaveAttribute('href', `https://picsizekit.com/zh${enPath}`);
+    await expect(page.locator('link[hreflang=x-default]')).toHaveAttribute('href', `https://picsizekit.com${enPath}`);
+    await expect(page.locator('.guide-steps li')).toHaveCount(3);
+    await expect(page.locator('.guide-faq')).toHaveCount(3);
+    await expect(page.locator('.related-tools a')).toHaveCount(3);
+    titles.add(await page.title());
+  }
+  expect(titles.size).toBe(8);
+  await context.close();
+});
+
+test('language navigation updates metadata and retains the selected image and settings', async ({ page }) => {
+  await page.goto('/webp-to-jpg/');
+  await page.locator('astro-island:not([ssr])').waitFor();
+  const webp = await page.evaluate(() => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 80; canvas.height = 60;
+    return canvas.toDataURL('image/webp').split(',')[1];
+  });
+  await page.locator('input[type=file]').setInputFiles({ name: 'seo.webp', mimeType: 'image/webp', buffer: Buffer.from(webp, 'base64') });
+  const image = page.locator('.ReactCrop img');
+  await expect(image).toBeVisible();
+  const source = await image.getAttribute('src');
+  await page.locator('.language-toggle').getByRole('link', { name: '中文' }).click();
+  await expect(page).toHaveURL(/\/zh\/webp-to-jpg\/$/);
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('在线将 WebP 转换为 JPG');
+  await expect(page.locator('.ReactCrop img')).toHaveAttribute('src', source!);
+  await expect(page.locator('meta[name=description]')).toHaveAttribute('content', /在浏览器中将 WebP/);
+  await page.getByRole('button', { name: '处理图片', exact: false }).click();
+  const download = page.waitForEvent('download');
+  await page.getByRole('button', { name: '处理完成 · 点击下载', exact: true }).click();
+  expect((await download).suggestedFilename()).toBe('seo-picsizekit.jpg');
+  await expect.poll(() => page.locator('.result-preview').evaluate((image: HTMLImageElement) => [image.naturalWidth, image.naturalHeight])).toEqual([80, 60]);
+  await page.goBack();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Convert WebP to JPG Online');
+  await page.locator('.preview-tabs').getByRole('button', { name: 'Original', exact: true }).click();
+  await expect(page.locator('.ReactCrop img')).toHaveAttribute('src', source!);
+});
+
+test('tool navigation initializes the relevant presets and has no mobile overflow', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto('/');
+  await page.locator('.related-tools').getByRole('link', { name: 'Add photo borders' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Add a Border to Your Photos');
+  await expect(page.getByRole('switch', { name: 'Photo frame', exact: true })).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByRole('button', { name: 'Percent', exact: true })).toHaveClass(/active/);
+  await page.locator('.related-tools').getByRole('link', { name: 'Compress images' }).click();
+  await expect(page.getByRole('heading', { level: 1 })).toHaveText('Compress Images Online for Free');
+  await expect(page.getByRole('switch', { name: 'Photo frame', exact: true })).toHaveAttribute('aria-checked', 'false');
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBeTruthy();
+});
+
+test('missing pages return a noindex 404', async ({ page }) => {
+  const response = await page.goto('/this-page-does-not-exist/');
+  expect(response?.status()).toBe(404);
+  await expect(page.locator('meta[name=robots]')).toHaveAttribute('content', 'noindex');
+});
