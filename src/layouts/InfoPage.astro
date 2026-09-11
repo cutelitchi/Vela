@@ -30,6 +30,7 @@ const zh = language === 'zh';
             <SiteLinks language={language} current={page} />
             <a class="info-back" href={pagePath(language)}>{zh ? '← 打开图片工具' : '← Open image tools'}</a>
           </aside>
+          <!--email_off-->
           <article class="info-article" aria-label={infoLabels[language][page]}>
             {copy.sections.map((section) => <section>
               <h2>{section.heading}</h2>
@@ -38,6 +39,7 @@ const zh = language === 'zh';
             </section>)}
             {page === 'privacy' && <p class="info-updated">{zh ? '最近更新：' : 'Last updated: '}<time datetime="2026-09-11">2026-09-11</time></p>}
           </article>
+          <!--/email_off-->
         </div>
       </main>
       <footer class="info-footer"><span>PicSizeKit / 2026</span><SiteLinks language={language} current={page} /><a href={pagePath(language)}>{zh ? '图片工具' : 'Image tools'}</a></footer>
