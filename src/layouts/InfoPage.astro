@@ -1,34 +1,34 @@
 ---
 import PageHead from '../components/PageHead.astro';
 import SiteLinks from '../components/SiteLinks';
-import { infoContent, infoLabels, infoPath, type InfoPage } from '../data/info';
+import LanguageMenu from '../components/LanguageMenu';
+import { infoContent, infoLabels, type InfoPage } from '../data/info';
+import { locales, localizedPaths, shellCopy } from '../data/locales';
 import { pagePath, type Language } from '../data/seo';
 import '../styles/global.css';
 interface Props { language: Language; page: InfoPage }
 const { language, page } = Astro.props;
 const copy = infoContent[language][page];
-const zh = language === 'zh';
+const t = shellCopy[language];
+const paths = localizedPaths(`${page}/`);
 ---
 <!doctype html>
-<html lang={zh ? 'zh-CN' : 'en'} transition:animate="none">
-  <head><PageHead language={language} title={copy.title} description={copy.description} enPath={infoPath('en', page)} zhPath={infoPath('zh', page)} /></head>
+<html lang={locales[language].tag} transition:animate="none">
+  <head><PageHead language={language} title={copy.title} description={copy.description} paths={paths} /></head>
   <body>
     <div class="app-shell info-shell">
       <header class="site-header">
         <a class="brand" href={pagePath(language)} aria-label="PicSizeKit home">
-          <span class="brand-mark"><span /></span><span><strong>PicSizeKit</strong><small>{zh ? '本地影像工具' : 'Local image tools'}</small></span>
+          <span class="brand-mark"><span /></span><span><strong>PicSizeKit</strong><small>{t.brand}</small></span>
         </a>
-        <div class="language-toggle" aria-label="Language / 语言">
-          <a href={infoPath('zh', page)} hreflang="zh-Hans" lang="zh-CN" class:list={{ active: zh }} aria-current={zh ? 'page' : undefined}>中文</a>
-          <a href={infoPath('en', page)} hreflang="en" lang="en" class:list={{ active: !zh }} aria-current={!zh ? 'page' : undefined}>EN</a>
-        </div>
+        <LanguageMenu language={language} paths={paths} />
       </header>
       <main class="info-main">
         <div class="info-hero"><span class="section-index">PICSIZEKIT / {page.toUpperCase()}</span><h1>{infoLabels[language][page]}</h1><p>{copy.intro}</p></div>
         <div class="info-grid">
           <aside class="info-sidebar">
             <SiteLinks language={language} current={page} />
-            <a class="info-back" href={pagePath(language)}>{zh ? '← 打开图片工具' : '← Open image tools'}</a>
+            <a class="info-back" href={pagePath(language)}>{t.open}</a>
           </aside>
           <!--email_off-->
           <article class="info-article" aria-label={infoLabels[language][page]}>
@@ -37,12 +37,12 @@ const zh = language === 'zh';
               {section.paragraphs.map((paragraph) => <p>{paragraph}</p>)}
               {section.links && <ul class="info-resource-links">{section.links.map((link) => <li><a href={link.href}>{link.label}<span aria-hidden="true"> ↗</span></a></li>)}</ul>}
             </section>)}
-            {page === 'privacy' && <p class="info-updated">{zh ? '最近更新：' : 'Last updated: '}<time datetime="2026-09-11">2026-09-11</time></p>}
+            {page === 'privacy' && <p class="info-updated">{t.updated}<time datetime="2026-09-11">2026-09-11</time></p>}
           </article>
           <!--/email_off-->
         </div>
       </main>
-      <footer class="info-footer"><span>PicSizeKit / 2026</span><SiteLinks language={language} current={page} /><a href={pagePath(language)}>{zh ? '图片工具' : 'Image tools'}</a></footer>
+      <footer class="info-footer"><span>PicSizeKit / 2026</span><SiteLinks language={language} current={page} /><a href={pagePath(language)}>{t.tools}</a></footer>
     </div>
   </body>
 </html>

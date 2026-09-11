@@ -1,9 +1,10 @@
 ---
 import { ClientRouter } from 'astro:transitions';
 import { site, type Language } from '../data/seo';
-interface Props { language: Language; title: string; description: string; enPath: string; zhPath: string }
-const { language, title, description, enPath, zhPath } = Astro.props;
-const canonical = site + (language === 'zh' ? zhPath : enPath);
+import { languages, locales } from '../data/locales';
+interface Props { language: Language; title: string; description: string; paths: Record<Language, string> }
+const { language, title, description, paths } = Astro.props;
+const canonical = site + paths[language];
 ---
 <meta charset="UTF-8" />
 <ClientRouter />
@@ -13,15 +14,15 @@ const canonical = site + (language === 'zh' ? zhPath : enPath);
 <title>{title}</title>
 <meta name="description" content={description} />
 <link rel="canonical" href={canonical} />
-<link rel="alternate" hreflang="en" href={site + enPath} />
-<link rel="alternate" hreflang="zh-Hans" href={site + zhPath} />
-<link rel="alternate" hreflang="x-default" href={site + enPath} />
+{languages.map((code) => <link rel="alternate" hreflang={locales[code].tag} href={site + paths[code]} />)}
+<link rel="alternate" hreflang="x-default" href={site + paths.en} />
 <meta property="og:type" content="website" />
 <meta property="og:site_name" content="PicSizeKit" />
 <meta property="og:title" content={title} />
 <meta property="og:description" content={description} />
 <meta property="og:url" content={canonical} />
-<meta property="og:locale" content={language === 'zh' ? 'zh_CN' : 'en_US'} />
+<meta property="og:locale" content={locales[language].og} />
+{languages.filter((code) => code !== language).map((code) => <meta property="og:locale:alternate" content={locales[code].og} />)}
 <meta name="twitter:card" content="summary" />
 <meta name="twitter:title" content={title} />
 <meta name="twitter:description" content={description} />

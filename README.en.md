@@ -44,7 +44,7 @@ Website: [picsizekit.com](https://picsizekit.com)
 | Configure before import | Explore and adjust all settings before choosing images; your preferences carry over |
 | Compact workspace | Side-by-side panels without a separate queue; switch batch previews with a compact selector |
 | EXIF privacy | Private metadata is removed by default; JPEG → JPEG preservation is optional |
-| Bilingual UI | Dedicated English and Chinese URLs; header language links preserve the active editor when switching languages |
+| Five languages | Dedicated English, Simplified Chinese, Japanese, Spanish and Traditional Chinese URLs; switching languages preserves images and settings |
 | Search-friendly pages | Localized titles, descriptions, canonical URLs, hreflang, static guides and an automatically generated sitemap |
 
 ## Privacy model
@@ -66,7 +66,9 @@ Download a local Blob or ZIP
 
 ## Image tools and search visibility
 
-Site information: [About](https://picsizekit.com/about/) · [Contact](https://picsizekit.com/contact/) · [Privacy policy](https://picsizekit.com/privacy/). All three pages have English and Chinese versions. Contact: [henuqin@gmail.com](mailto:henuqin@gmail.com). The privacy policy separates local image processing, hosting requests, email feedback and future advertising; update it and consent controls when enabling ads.
+Site information: [About](https://picsizekit.com/about/) · [Contact](https://picsizekit.com/contact/) · [Privacy policy](https://picsizekit.com/privacy/). All three pages are available in five languages. Contact: [henuqin@gmail.com](mailto:henuqin@gmail.com). The privacy policy separates local image processing, hosting requests, email feedback and future advertising; update it and consent controls when enabling ads.
+
+Languages: [English](https://picsizekit.com/) · [简体中文](https://picsizekit.com/zh/) · [日本語](https://picsizekit.com/ja/) · [Español](https://picsizekit.com/es/) · [繁體中文](https://picsizekit.com/zh-hant/). Each language has four tool pages and three information pages, totaling 35 URLs. Locale configuration lives in `src/data/locales.ts`, and new translations in `src/data/translations/`. No runtime translation service is used.
 
 To test production output, finish `npm run build` first, then run `TEST_PREVIEW=1 npm test`. Avoid running a build concurrently with development-server tests because they share caches.
 

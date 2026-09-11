@@ -44,7 +44,7 @@ PicSizeKit 是一个隐私优先的在线图片处理工具。图片解码、裁
 | 上传前配置 | 无需选择图片即可查看并调整全部设置，导入后保留预设参数 |
 | 紧凑工作区 | 左右分栏、无独立图片队列；批量图片通过下拉菜单切换预览 |
 | EXIF 隐私 | 默认删除位置、设备型号和拍摄时间等元数据；JPEG → JPEG 可选择保留 |
-| 中英文界面 | 独立中英文网址，顶部语言链接切换时保留当前编辑状态 |
+| 五种语言 | 英语、简体中文、日语、西班牙语、繁体中文独立网址；顶部菜单切换语言时保留当前图片及参数 |
 | 搜索友好页面 | 本地化标题、描述、规范网址、hreflang、静态使用指南及自动生成的网站地图 |
 
 ## 隐私设计
@@ -66,7 +66,9 @@ Blob / ZIP 本地下载
 
 ## 图片工具与搜索收录
 
-网站信息：[关于我们](https://picsizekit.com/zh/about/) · [联系我们](https://picsizekit.com/zh/contact/) · [隐私政策](https://picsizekit.com/zh/privacy/)。三个页面均提供中英文版本，联系邮箱为 [henuqin@gmail.com](mailto:henuqin@gmail.com)。隐私政策区分本地图片处理、托管访问数据、邮件反馈和未来广告；启用广告时需同步更新政策及同意管理配置。
+网站信息：[关于我们](https://picsizekit.com/zh/about/) · [联系我们](https://picsizekit.com/zh/contact/) · [隐私政策](https://picsizekit.com/zh/privacy/)。三个页面均提供五种语言，联系邮箱为 [henuqin@gmail.com](mailto:henuqin@gmail.com)。隐私政策区分本地图片处理、托管访问数据、邮件反馈和未来广告；启用广告时需同步更新政策及同意管理配置。
+
+语言入口：[English](https://picsizekit.com/) · [简体中文](https://picsizekit.com/zh/) · [日本語](https://picsizekit.com/ja/) · [Español](https://picsizekit.com/es/) · [繁體中文](https://picsizekit.com/zh-hant/)。每种语言包含 4 个工具页面与 3 个网站信息页面，共 35 个网址。语言配置集中在 `src/data/locales.ts`；新语言的工具、界面及网站信息译文位于 `src/data/translations/`，不依赖运行时翻译服务。
 
 验证生产构建：先执行 `npm run build`，完成后执行 `TEST_PREVIEW=1 npm test`。请勿同时运行构建和开发服务测试，以免共享缓存发生冲突。
 

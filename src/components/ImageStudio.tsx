@@ -6,11 +6,14 @@ import {
 } from 'react-image-crop';
 import TouchCrop from './TouchCrop';
 import SiteLinks from './SiteLinks';
+import LanguageMenu from './LanguageMenu';
+import { localizedPaths, shellCopy } from '../data/locales';
+import { extraUI, presetLabels } from '../data/translations/ui';
 import pica from 'pica';
 import { zipSync } from 'fflate';
 import piexif from 'piexifjs';
 import 'react-image-crop/dist/ReactCrop.css';
-import { content, pagePath, type Language, type Tool } from '../data/seo';
+import { pagePath, type Language, type Tool } from '../data/seo';
 
 type OutputFormat = 'jpeg' | 'png' | 'webp';
 type ResizeMode = 'pixels' | 'percent';
@@ -36,7 +39,7 @@ type LiveEstimate = {
   height: number;
 };
 
-const dictionaries = {
+const baseDictionaries = {
   zh: {
     brandNote: '本地影像工具',
     privacy: '图片仅在您的浏览器中处理，不会上传到服务器。',
@@ -175,6 +178,8 @@ const dictionaries = {
   },
 } as const;
 
+const dictionaries: Record<Language, Record<keyof typeof baseDictionaries.en, string>> = { ...baseDictionaries, ...extraUI };
+
 const standardRatioPresets = [
   { key: 'original', value: 0, label: 'Original' },
   { key: '1:1', value: 1, label: '1:1' },
@@ -309,8 +314,7 @@ function IconDownload() {
   );
 }
 
-export default function ImageStudio({ language = 'en', tool = 'home' }: { language?: Language; tool?: Tool }) {
-  const pageCopy = content[language][tool];
+export default function ImageStudio({ language = 'en', tool = 'home', headline, intro }: { language?: Language; tool?: Tool; headline: string; intro: string }) {
   const [items, setItems] = useState<ImageItem[]>([]);
   const [selectedId, setSelectedId] = useState<string>('');
   const [crops, setCrops] = useState<Record<string, PercentCrop>>({});
@@ -348,6 +352,8 @@ export default function ImageStudio({ language = 'en', tool = 'home' }: { langua
   const theaterJobRef = useRef(0);
   const selected = items.find((item) => item.id === selectedId) ?? items[0];
   const t = dictionaries[language];
+  const translatedPresets = language === 'en' || language === 'zh' ? undefined : presetLabels[language];
+  const photoLabel = (index: number) => translatedPresets?.photos[index] ?? (language === 'zh' ? chinaPhotoPresets[index]?.labelZh : chinaPhotoPresets[index]?.labelEn) ?? '';
 
   useEffect(() => {
     setPreviewView('source');
@@ -750,18 +756,15 @@ export default function ImageStudio({ language = 'en', tool = 'home' }: { langua
         </a>
         <div className="header-actions">
           <span className="local-chip"><i /> {t.localBadge}</span>
-          <div className="language-toggle" aria-label="Language / 语言">
-            <a href={pagePath('zh', tool)} hrefLang="zh-Hans" lang="zh-CN" aria-current={language === 'zh' ? 'page' : undefined} className={language === 'zh' ? 'active' : ''}>中文</a>
-            <a href={pagePath('en', tool)} hrefLang="en" lang="en" aria-current={language === 'en' ? 'page' : undefined} className={language === 'en' ? 'active' : ''}>EN</a>
-          </div>
+          <LanguageMenu language={language} paths={localizedPaths(tool === 'home' ? '' : `${tool}/`)} />
         </div>
       </header>
 
       <section className="intro-strip workspace-active">
         <div>
           <span className="section-index">01 / IMAGE LAB</span>
-          <h1>{pageCopy.headline}</h1>
-          <p>{pageCopy.intro}</p>
+          <h1>{headline}</h1>
+          <p>{intro}</p>
         </div>
         <div className="privacy-note">
           <span className="privacy-icon">✓</span>
@@ -893,27 +896,27 @@ export default function ImageStudio({ language = 'en', tool = 'home' }: { langua
                 </div>
                 <div className="photo-preset-heading"><span>{t.cinemaRatios}</span><i /></div>
                 <div className="photo-ratio-grid cinema-ratio-grid">
-                  {cinemaRatioPresets.map((preset) => (
+                  {cinemaRatioPresets.map((preset, index) => (
                     <button
                       key={preset.key}
                       className={ratioKey === preset.key ? 'active' : ''}
                       onClick={() => updateRatio(preset.key)}
                     >
                       <span>{preset.label}</span>
-                      <small>{language === 'zh' ? preset.noteZh : preset.noteEn}</small>
+                      <small>{translatedPresets?.cinema[index] ?? (language === 'zh' ? preset.noteZh : preset.noteEn)}</small>
                     </button>
                   ))}
                 </div>
                 <details className="photo-presets">
-                <summary>{t.photoRatios}{ratioKey.startsWith('cn-') && <span> · {language === 'zh' ? chinaPhotoPresets.find((preset) => preset.key === ratioKey)?.labelZh : chinaPhotoPresets.find((preset) => preset.key === ratioKey)?.labelEn}</span>}</summary>
+                <summary>{t.photoRatios}{ratioKey.startsWith('cn-') && <span> · {photoLabel(chinaPhotoPresets.findIndex((preset) => preset.key === ratioKey))}</span>}</summary>
                 <div className="photo-ratio-grid">
-                  {chinaPhotoPresets.map((preset) => (
+                  {chinaPhotoPresets.map((preset, index) => (
                     <button
                       key={preset.key}
                       className={ratioKey === preset.key ? 'active' : ''}
                       onClick={() => updateRatio(preset.key)}
                     >
-                      <span>{language === 'zh' ? preset.labelZh : preset.labelEn}</span>
+                      <span>{photoLabel(index)}</span>
                       <small>{preset.size}</small>
                     </button>
                   ))}
@@ -993,7 +996,7 @@ export default function ImageStudio({ language = 'en', tool = 'home' }: { langua
                     <button aria-pressed={frameStyle === 'all'} className={frameStyle === 'all' ? 'active' : ''} onClick={() => { setFrameStyle('all'); setFrameEnabled(true); }}>{t.frameAll}</button>
                   </div>
                   <div className="frame-swatches" aria-label={t.frameColor}>
-                    {frameColors.map((color) => <button key={color.hex} style={{ backgroundColor: color.hex }} className={frameColor.toUpperCase() === color.hex ? 'active' : ''} aria-label={language === 'zh' ? color.zh : color.en} title={language === 'zh' ? color.zh : color.en} aria-pressed={frameColor.toUpperCase() === color.hex} onClick={() => { setFrameColor(color.hex); setFrameEnabled(true); }} />)}
+                    {frameColors.map((color, index) => <button key={color.hex} style={{ backgroundColor: color.hex }} className={frameColor.toUpperCase() === color.hex ? 'active' : ''} aria-label={translatedPresets?.colors[index] ?? (language === 'zh' ? color.zh : color.en)} title={translatedPresets?.colors[index] ?? (language === 'zh' ? color.zh : color.en)} aria-pressed={frameColor.toUpperCase() === color.hex} onClick={() => { setFrameColor(color.hex); setFrameEnabled(true); }} />)}
                   </div>
                   <div className="frame-width-field">
                     <label htmlFor="frame-width">{t.frameWidth}</label>
@@ -1066,7 +1069,7 @@ export default function ImageStudio({ language = 'en', tool = 'home' }: { langua
 
       <footer>
         <span>PicSizeKit / 2026</span>
-        <a href="#guide">{language === 'zh' ? '使用指南与更多工具 ↓' : 'How to use & more tools ↓'}</a>
+        <a href="#guide">{shellCopy[language].help}</a>
         <SiteLinks language={language} />
         <p>{t.footer}</p>
       </footer>

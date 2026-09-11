@@ -1,17 +1,19 @@
-export type Language = 'en' | 'zh';
+import { locales, type Language } from './locales';
+import { extraContent } from './translations/tools';
+export { languages, type Language } from './locales';
 export type Tool = 'home' | 'compress-image' | 'webp-to-jpg' | 'add-border-to-photo';
-export const languages: Language[] = ['en', 'zh'];
 export const tools: Tool[] = ['home', 'compress-image', 'webp-to-jpg', 'add-border-to-photo'];
 export const site = 'https://picsizekit.com';
 export function pagePath(language: Language, tool: Tool = 'home') {
-  return `${language === 'zh' ? '/zh/' : '/'}${tool === 'home' ? '' : `${tool}/`}`;
+  return `${locales[language].prefix}${tool === 'home' ? '' : `${tool}/`}`;
 }
 
-type Content = {
+export type Content = {
   title: string; description: string; headline: string; intro: string; label: string;
   guideTitle: string; steps: string[]; tip: string; faqs: [string, string][];
 };
 export const content: Record<Language, Record<Tool, Content>> = {
+  ...extraContent,
   en: {
     home: {
       title: 'Free Image Resizer, Cropper & Compressor | PicSizeKit',

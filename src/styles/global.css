@@ -50,6 +50,15 @@ svg { width: 1.15rem; height: 1.15rem; fill: none; stroke: currentColor; stroke-
 .language-toggle { background: rgba(255,255,255,.07); border: 1px solid rgba(255,255,255,.13); padding: 3px; border-radius: 10px; display: flex; }
 .language-toggle a { text-decoration: none; background: transparent; color: #a6b3c4; padding: 7px 11px; border-radius: 7px; font-size: .78rem; }
 .language-toggle a.active { background: #fff; color: var(--ink); }
+.language-menu { position: relative; flex-shrink: 0; z-index: 30; }
+.language-menu > summary { list-style: none; cursor: pointer; display: flex; align-items: center; gap: 8px; border: 1px solid #ffffff26; border-radius: 10px; background: #ffffff0d; color: #e5ecf5; padding: 9px 12px; font-size: .82rem; }
+.language-menu > summary::-webkit-details-marker { display: none; }
+.language-menu > summary:focus-visible, .language-toggle a:focus-visible { outline: 2px solid var(--cyan); outline-offset: 3px; }
+.language-menu .language-toggle { position: absolute; top: calc(100% + 8px); right: 0; width: 176px; padding: 6px; flex-direction: column; background: #142136; box-shadow: 0 12px 30px #0007; }
+.language-menu .language-toggle a { padding: 11px 12px; min-height: 44px; display: flex; align-items: center; }
+.language-menu .language-toggle a:hover { background: #ffffff18; color: #fff; }
+.language-menu .language-toggle a.active:hover { background: #fff; color: var(--ink); }
+.brand small { max-width: 220px; }
 
 .intro-strip { display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 420px); gap: 40px; align-items: end; padding: 38px 0 26px; }
 .section-index { font: 500 .7rem ui-monospace, 'SFMono-Regular', Consolas, monospace; letter-spacing: .12em; color: var(--cyan); }

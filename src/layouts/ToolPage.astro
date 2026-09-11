@@ -1,24 +1,25 @@
 ---
 import ImageStudio from '../components/ImageStudio';
 import PageHead from '../components/PageHead.astro';
+import { locales, localizedPaths, shellCopy } from '../data/locales';
 import { content, pagePath, tools, type Language, type Tool } from '../data/seo';
 import '../styles/global.css';
 interface Props { language: Language; tool: Tool }
 const { language, tool } = Astro.props;
 const copy = content[language][tool];
-const zh = language === 'zh';
+const t = shellCopy[language];
 ---
 <!doctype html>
-<html lang={zh ? 'zh-CN' : 'en'} transition:animate="none">
+<html lang={locales[language].tag} transition:animate="none">
   <head>
-    <PageHead language={language} title={copy.title} description={copy.description} enPath={pagePath('en', tool)} zhPath={pagePath('zh', tool)} />
+    <PageHead language={language} title={copy.title} description={copy.description} paths={localizedPaths(tool === 'home' ? '' : `${tool}/`)} />
   </head>
   <body>
-    <ImageStudio language={language} tool={tool} client:load transition:persist={`studio-${tool}`} />
+    <ImageStudio language={language} tool={tool} headline={copy.headline} intro={copy.intro} client:load transition:persist={`studio-${tool}`} />
     <section class="tool-guide" id="guide" aria-labelledby="guide-title">
       <div class="guide-heading">
-        <div><span class="section-index">03 / {zh ? '使用指南' : 'QUICK GUIDE'}</span><h2 id="guide-title">{copy.guideTitle}</h2></div>
-        <a href="#top">{zh ? '返回编辑器 ↑' : 'Back to editor ↑'}</a>
+        <div><span class="section-index">03 / {t.guide}</span><h2 id="guide-title">{copy.guideTitle}</h2></div>
+        <a href="#top">{t.back}</a>
       </div>
       <ol class="guide-steps">
         {copy.steps.map((step, index) => <li><span class="step-number">0{index + 1}</span><p>{step}</p></li>)}
@@ -26,13 +27,13 @@ const zh = language === 'zh';
       <p class="guide-tip">{copy.tip}</p>
       <div class="guide-bottom">
         <section aria-labelledby="faq-title">
-          <h2 id="faq-title">{zh ? '常见问题' : 'Frequently asked questions'}</h2>
+          <h2 id="faq-title">{t.faq}</h2>
           {copy.faqs.map(([question, answer]) => <details class="guide-faq"><summary>{question}</summary><p>{answer}</p></details>)}
         </section>
         <nav class="related-tools" aria-labelledby="tools-title">
-          <h2 id="tools-title">{zh ? '更多图片工具' : 'Explore image tools'}</h2>
+          <h2 id="tools-title">{t.explore}</h2>
           {tools.filter((other) => other !== tool).map((other) => <a href={pagePath(language, other)}><span>{content[language][other].label}</span><span aria-hidden="true">↗</span></a>)}
-          <p>{zh ? '所有工具免费使用，无需账户。图片在本地浏览器处理。' : 'Every tool is free, with no account required. Your images are processed in your browser.'}</p>
+          <p>{t.free}</p>
         </nav>
       </div>
     </section>

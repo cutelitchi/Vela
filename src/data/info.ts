@@ -1,4 +1,6 @@
 import { pagePath, type Language } from './seo';
+import { shellCopy } from './locales';
+import { extraInfo } from './translations/info';
 
 export const infoPages = ['about', 'contact', 'privacy'] as const;
 export type InfoPage = typeof infoPages[number];
@@ -7,19 +9,17 @@ export const feedbackUrl = `${projectUrl}/issues`;
 export const contactEmail = 'henuqin@gmail.com';
 const emailLink = { label: contactEmail, href: `mailto:${contactEmail}` };
 export const infoPath = (language: Language, page: InfoPage) => `${pagePath(language)}${page}/`;
-export const infoLabels = {
-  en: { about: 'About', contact: 'Contact', privacy: 'Privacy policy' },
-  zh: { about: '关于我们', contact: '联系我们', privacy: '隐私政策' },
-};
+export const infoLabels = shellCopy;
 
 type Section = { heading: string; paragraphs: string[]; links?: { label: string; href: string }[] };
-type PageContent = { title: string; description: string; intro: string; sections: Section[] };
+export type PageContent = { title: string; description: string; intro: string; sections: Section[] };
 const cloudflare = 'https://www.cloudflare.com/privacypolicy/';
 const githubPrivacy = 'https://docs.github.com/en/site-policy/privacy-policies/github-general-privacy-statement';
 const googleData = 'https://policies.google.com/technologies/partner-sites';
 const adChoices = 'https://myadcenter.google.com/';
 
 export const infoContent: Record<Language, Record<InfoPage, PageContent>> = {
+  ...extraInfo,
   en: {
     about: {
       title: 'About PicSizeKit — Local Image Tools',

@@ -5,23 +5,30 @@ test('all sitemap pages expose localized content and reciprocal language links w
   const response = await request.get('/sitemap.xml');
   expect(response.ok()).toBeTruthy();
   const urls = [...(await response.text()).matchAll(/<loc>(.*?)<\/loc>/g)].map((match) => match[1]);
-  expect(urls).toHaveLength(14);
+  expect(urls).toHaveLength(35);
+  const locales = [
+    { prefix: '/', tag: 'en' }, { prefix: '/zh/', tag: 'zh-Hans' },
+    { prefix: '/ja/', tag: 'ja' }, { prefix: '/es/', tag: 'es' }, { prefix: '/zh-hant/', tag: 'zh-Hant' },
+  ];
   const context = await browser.newContext({ javaScriptEnabled: false, baseURL });
   const page = await context.newPage();
   const titles = new Set<string>();
   for (const url of urls) {
     const path = new URL(url).pathname;
-    const zh = path.startsWith('/zh/');
+    const locale = locales.find(({ prefix }) => prefix !== '/' && path.startsWith(prefix)) ?? locales[0];
+    const suffix = path.slice(locale.prefix.length);
     const result = await page.goto(path);
     expect(result?.status()).toBe(200);
-    await expect(page.locator('html')).toHaveAttribute('lang', zh ? 'zh-CN' : 'en');
+    await expect(page.locator('html')).toHaveAttribute('lang', locale.tag);
     await expect(page.locator('h1')).toHaveCount(1);
     await expect(page.locator('link[rel=canonical]')).toHaveAttribute('href', url);
     await expect(page.locator('meta[name=description]')).toHaveAttribute('content', /^.{30,}$/);
-    const enPath = zh ? path.replace(/^\/zh\//, '/') : path;
-    await expect(page.locator('link[hreflang=en]')).toHaveAttribute('href', `https://picsizekit.com${enPath}`);
-    await expect(page.locator('link[hreflang=zh-Hans]')).toHaveAttribute('href', `https://picsizekit.com/zh${enPath}`);
-    await expect(page.locator('link[hreflang=x-default]')).toHaveAttribute('href', `https://picsizekit.com${enPath}`);
+    await expect(page.locator('link[rel=alternate]')).toHaveCount(6);
+    for (const alternate of locales) {
+      await expect(page.locator(`link[hreflang="${alternate.tag}"]`)).toHaveAttribute('href', `https://picsizekit.com${alternate.prefix}${suffix}`);
+      await expect(page.locator(`.language-toggle a[hreflang="${alternate.tag}"]`)).toHaveAttribute('href', `${alternate.prefix}${suffix}`);
+    }
+    await expect(page.locator('link[hreflang=x-default]')).toHaveAttribute('href', `https://picsizekit.com/${suffix}`);
     if (/\/(about|contact|privacy)\/$/.test(path)) {
       await expect(page.locator('.info-article')).toBeVisible();
       expect(await page.locator('.info-article h2').count()).toBeGreaterThanOrEqual(4);
@@ -34,7 +41,7 @@ test('all sitemap pages expose localized content and reciprocal language links w
     await expect(page.locator('footer .site-links a')).toHaveCount(3);
     titles.add(await page.title());
   }
-  expect(titles.size).toBe(14);
+  expect(titles.size).toBe(35);
   await context.close();
 });
 
@@ -44,7 +51,8 @@ test('mobile footer leads to email contact, translated privacy and a working edi
   await page.locator('footer').getByRole('link', { name: 'Contact', exact: true }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('Contact');
   await expect(page.locator('.info-article a[href="mailto:henuqin@gmail.com"]').first()).toBeVisible();
-  await page.locator('.language-toggle').getByRole('link', { name: '中文' }).click();
+  await page.locator('.language-menu summary').click();
+  await page.locator('.language-toggle').getByRole('link', { name: '简体中文', exact: true }).click();
   await expect(page).toHaveURL(/\/zh\/contact\/$/);
   await page.locator('aside').getByRole('link', { name: '隐私政策' }).click();
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('隐私政策');
@@ -70,7 +78,8 @@ test('language navigation updates metadata and retains the selected image and se
   const image = page.locator('.ReactCrop img');
   await expect(image).toBeVisible();
   const source = await image.getAttribute('src');
-  await page.locator('.language-toggle').getByRole('link', { name: '中文' }).click();
+  await page.locator('.language-menu summary').click();
+  await page.locator('.language-toggle').getByRole('link', { name: '简体中文', exact: true }).click();
   await expect(page).toHaveURL(/\/zh\/webp-to-jpg\/$/);
   await expect(page.getByRole('heading', { level: 1 })).toHaveText('在线将 WebP 转换为 JPG');
   await expect(page.locator('.ReactCrop img')).toHaveAttribute('src', source!);

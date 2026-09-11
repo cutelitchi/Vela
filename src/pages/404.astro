@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import { languages, locales } from '../data/locales';
 ---
 <!doctype html>
 <html lang="en">
@@ -10,6 +11,6 @@ import '../styles/global.css';
     <title>Page not found | PicSizeKit</title>
   </head>
   <body>
-    <main class="not-found"><span class="section-index">404 / PICSIZEKIT</span><h1>We couldn’t find that page.</h1><p>Choose an image tool to get started.</p><a href="/">Image tools →</a><a href="/zh/" lang="zh-CN">中文图片工具 →</a></main>
+    <main class="not-found"><span class="section-index">404 / PICSIZEKIT</span><h1>We couldn’t find that page.</h1><p>Choose your language to open the image tools.</p>{languages.map((code) => <a href={locales[code].prefix} lang={locales[code].tag}>{locales[code].name} →</a>)}</main>
   </body>
 </html>
