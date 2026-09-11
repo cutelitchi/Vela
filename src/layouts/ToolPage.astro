@@ -1,37 +1,17 @@
 ---
 import ImageStudio from '../components/ImageStudio';
-import { ClientRouter } from 'astro:transitions';
-import { content, pagePath, site, tools, type Language, type Tool } from '../data/seo';
+import PageHead from '../components/PageHead.astro';
+import { content, pagePath, tools, type Language, type Tool } from '../data/seo';
 import '../styles/global.css';
 interface Props { language: Language; tool: Tool }
 const { language, tool } = Astro.props;
 const copy = content[language][tool];
-const canonical = site + pagePath(language, tool);
 const zh = language === 'zh';
 ---
 <!doctype html>
 <html lang={zh ? 'zh-CN' : 'en'} transition:animate="none">
   <head>
-    <meta charset="UTF-8" />
-    <ClientRouter />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#09111f" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>{copy.title}</title>
-    <meta name="description" content={copy.description} />
-    <link rel="canonical" href={canonical} />
-    <link rel="alternate" hreflang="en" href={site + pagePath('en', tool)} />
-    <link rel="alternate" hreflang="zh-Hans" href={site + pagePath('zh', tool)} />
-    <link rel="alternate" hreflang="x-default" href={site + pagePath('en', tool)} />
-    <meta property="og:type" content="website" />
-    <meta property="og:site_name" content="PicSizeKit" />
-    <meta property="og:title" content={copy.title} />
-    <meta property="og:description" content={copy.description} />
-    <meta property="og:url" content={canonical} />
-    <meta property="og:locale" content={zh ? 'zh_CN' : 'en_US'} />
-    <meta name="twitter:card" content="summary" />
-    <meta name="twitter:title" content={copy.title} />
-    <meta name="twitter:description" content={copy.description} />
+    <PageHead language={language} title={copy.title} description={copy.description} enPath={pagePath('en', tool)} zhPath={pagePath('zh', tool)} />
   </head>
   <body>
     <ImageStudio language={language} tool={tool} client:load transition:persist={`studio-${tool}`} />

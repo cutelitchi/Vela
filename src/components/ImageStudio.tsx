@@ -5,6 +5,7 @@ import {
   type PercentCrop,
 } from 'react-image-crop';
 import TouchCrop from './TouchCrop';
+import SiteLinks from './SiteLinks';
 import pica from 'pica';
 import { zipSync } from 'fflate';
 import piexif from 'piexifjs';
@@ -1066,6 +1067,7 @@ export default function ImageStudio({ language = 'en', tool = 'home' }: { langua
       <footer>
         <span>PicSizeKit / 2026</span>
         <a href="#guide">{language === 'zh' ? '使用指南与更多工具 ↓' : 'How to use & more tools ↓'}</a>
+        <SiteLinks language={language} />
         <p>{t.footer}</p>
       </footer>
     </main>

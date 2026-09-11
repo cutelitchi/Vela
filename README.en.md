@@ -66,6 +66,10 @@ Download a local Blob or ZIP
 
 ## Image tools and search visibility
 
+Site information: [About](https://picsizekit.com/about/) · [Contact](https://picsizekit.com/contact/) · [Privacy policy](https://picsizekit.com/privacy/). All three pages have English and Chinese versions. Contact: [henuqin@gmail.com](mailto:henuqin@gmail.com). The privacy policy separates local image processing, hosting requests, email feedback and future advertising; update it and consent controls when enabling ads.
+
+To test production output, finish `npm run build` first, then run `TEST_PREVIEW=1 npm test`. Avoid running a build concurrently with development-server tests because they share caches.
+
 | Tool | English | 中文 |
 | --- | --- | --- |
 | Resize, crop and convert | [Open](https://picsizekit.com/) | [打开](https://picsizekit.com/zh/) |

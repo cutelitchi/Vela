@@ -66,6 +66,10 @@ Blob / ZIP 本地下载
 
 ## 图片工具与搜索收录
 
+网站信息：[关于我们](https://picsizekit.com/zh/about/) · [联系我们](https://picsizekit.com/zh/contact/) · [隐私政策](https://picsizekit.com/zh/privacy/)。三个页面均提供中英文版本，联系邮箱为 [henuqin@gmail.com](mailto:henuqin@gmail.com)。隐私政策区分本地图片处理、托管访问数据、邮件反馈和未来广告；启用广告时需同步更新政策及同意管理配置。
+
+验证生产构建：先执行 `npm run build`，完成后执行 `TEST_PREVIEW=1 npm test`。请勿同时运行构建和开发服务测试，以免共享缓存发生冲突。
+
 | 工具 | English | 中文 |
 | --- | --- | --- |
 | 缩放、裁剪与转换 | [Open](https://picsizekit.com/) | [打开](https://picsizekit.com/zh/) |

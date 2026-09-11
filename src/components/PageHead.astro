@@ -1,0 +1,27 @@
+---
+import { ClientRouter } from 'astro:transitions';
+import { site, type Language } from '../data/seo';
+interface Props { language: Language; title: string; description: string; enPath: string; zhPath: string }
+const { language, title, description, enPath, zhPath } = Astro.props;
+const canonical = site + (language === 'zh' ? zhPath : enPath);
+---
+<meta charset="UTF-8" />
+<ClientRouter />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="theme-color" content="#09111f" />
+<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<title>{title}</title>
+<meta name="description" content={description} />
+<link rel="canonical" href={canonical} />
+<link rel="alternate" hreflang="en" href={site + enPath} />
+<link rel="alternate" hreflang="zh-Hans" href={site + zhPath} />
+<link rel="alternate" hreflang="x-default" href={site + enPath} />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="PicSizeKit" />
+<meta property="og:title" content={title} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonical} />
+<meta property="og:locale" content={language === 'zh' ? 'zh_CN' : 'en_US'} />
+<meta name="twitter:card" content="summary" />
+<meta name="twitter:title" content={title} />
+<meta name="twitter:description" content={description} />

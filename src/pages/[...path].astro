@@ -1,13 +1,20 @@
 ---
 import ToolPage from '../layouts/ToolPage.astro';
+import InfoPage from '../layouts/InfoPage.astro';
+import { infoPages, infoPath } from '../data/info';
 import { languages, tools, pagePath } from '../data/seo';
 
 export function getStaticPaths() {
-  return languages.flatMap((language) => tools.map((tool) => ({
+  const toolRoutes = languages.flatMap((language) => tools.map((tool) => ({
     params: { path: pagePath(language, tool).slice(1, -1) },
-    props: { language, tool },
+    props: { language, tool, info: undefined },
   }))).filter(({ params }) => params.path !== '');
+  const infoRoutes = languages.flatMap((language) => infoPages.map((info) => ({
+    params: { path: infoPath(language, info).slice(1, -1) },
+    props: { language, tool: undefined, info },
+  })));
+  return [...toolRoutes, ...infoRoutes];
 }
-const { language, tool } = Astro.props;
+const { language, tool, info } = Astro.props;
 ---
-<ToolPage language={language} tool={tool} />
+{tool ? <ToolPage language={language} tool={tool} /> : <InfoPage language={language} page={info!} />}
